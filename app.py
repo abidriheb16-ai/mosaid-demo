@@ -2,6 +2,8 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 from gtts import gTTS
+from fpdf import FPDF
+import os
 
 # 1. تهيئة واجهة التطبيق
 st.set_page_config(page_title="موساعد - Mosaid AI", page_icon="🩺", layout="wide")
@@ -15,100 +17,123 @@ except Exception:
     st.error("⚠️ يرجى التأكد من ضبط GEMINI_API_KEY في Secrets.")
     st.stop()
 
-# 3. اختيار اللغة (عربية، تركية، إنجليزية)
-st.title("🩺 Mosaid Medical System - نظام موساعد الشامل")
+# إدارة جلسة البيانات المؤقتة
+if "patient_summary" not in st.session_state:
+    st.session_state.patient_summary = None
 
+# دالة إنشاء تقرير PDF الوصفة الطبية
+def create_pdf_report(doc_text, med_list):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(200, 10, txt="MOSAID MEDICAL SYSTEM - PRESCRIPTION & REPORT", ln=1, align='C')
+    pdf.ln(10)
+    pdf.set_font("Arial", size=11)
+    pdf.multi_cell(0, 10, txt=f"DOCTOR DIAGNOSIS:\n{doc_text}\n\nPRESCRIPTION / MEDICATIONS:\n{med_list}")
+    file_path = "Mosaid_Prescription.pdf"
+    pdf.output(file_path)
+    return file_path
+
+st.title("🩺 Mosaid Medical System - منصة موساعد التفاعلية")
+
+# اختيار اللغة
 lang_choice = st.selectbox(
-    "🌐 اختر لغة التواصل / Dil Seçin / Select Language:",
+    "🌐 اختر لغة التواصل / Select Language:",
     ["العربية (Arabic)", "Türkçe (Turkish)", "English"]
 )
 
-if "Türkçe" in lang_choice:
-    user_lang = "Turkish"
-    tts_lang = "tr"
-    input_label = "🎙️ Sesinizi kaydedin ve şikayetinizi söyleyin:"
-    camera_label = "📸 Tıbbi bir fotoğraf çekin (Cilt döküntüsü, ilaç vb.):"
-    med_label = "💊 İlaç Takvimi ve Kontrolü:"
-elif "English" in lang_choice:
-    user_lang = "English"
-    tts_lang = "en"
-    input_label = "🎙️ Record your voice and state your symptoms:"
-    camera_label = "📸 Take a medical photo (Skin rash, medication, etc.):"
-    med_label = "💊 Medication Schedule & Daily Tracking:"
-else:
-    user_lang = "Arabic"
-    tts_lang = "ar"
-    input_label = "🎙️ سجل صوتك واشرح الأعراض التي تشعر بها:"
-    camera_label = "📸 التقط صورة طبية (طفح جلدي، دواء، أو تحليل):"
-    med_label = "💊 جدول الأدوية والمتابعة اليومية:"
+user_lang = "Arabic" if "العربية" in lang_choice else ("Turkish" if "Türkçe" in lang_choice else "English")
+tts_lang = "ar" if "العربية" in lang_choice else ("tr" if "Türkçe" in lang_choice else "en")
 
 st.markdown("---")
 
-# قسم التواصل الصوتي
-st.subheader(input_label)
-user_audio = st.audio_input("تسجيل الصوت / Audio Record")
+# تقسيم الشاشة إلى بوابتين (المريض والطبيب)
+col_patient, col_doctor = st.columns(2)
 
-if user_audio:
-    with st.spinner("جاري التحليل الصوتي... / Analyzing..."):
-        audio_bytes = user_audio.read()
-        prompt = f"""
-        أنت المساعد الطبي الذكي 'موساعد'.
-        استمع للتسجيل الصوتي للمريض وافهمه بأي لغة يتحدث بها.
-        ثم قم بالرد عليه بلغة التواصل المختارة وهي: {user_lang}.
-        قدم له تشخيصاً مبدئياً وتطميناً بأسلوب دافئ وقصير.
-        """
-        response = model.generate_content([
-            prompt,
-            {"mime_type": "audio/wav", "data": audio_bytes}
-        ])
-        res_text = response.text
-        st.success("تم التحليل بنجاح!")
-        st.write(f"💬 **الرد ({user_lang}):**\n", res_text)
-        
-        try:
-            tts = gTTS(text=res_text, lang=tts_lang)
-            tts.save("response.mp3")
-            st.audio("response.mp3", autoplay=True)
-        except Exception:
-            pass
+# ==================== 👤 بوابة المريض ====================
+with col_patient:
+    st.header("👤 بوابة المريض (Patient Portal)")
+    st.subheader("🎙️ سجل أعراضك بالصوت:")
+    user_audio = st.audio_input("تسجيل الصوت / Audio Record")
 
-st.markdown("---")
+    if user_audio:
+        with st.spinner("جاري التحليل ومشاركة الأعراض مع الطبيب..."):
+            audio_bytes = user_audio.read()
+            prompt = f"""
+            أنت المساعد الطبي الذكي 'موساعد'.
+            استمع لمشكلة المريض، اعطه رد تطميني قصير بلغة المريض ({user_lang}).
+            ثم أنشئ ملخصاً طبياً باللغة التركية مسبوقاً بكلمة [TURKISH_SUMMARY] ليتناقش به الطبيب.
+            """
+            response = model.generate_content([prompt, {"mime_type": "audio/wav", "data": audio_bytes}])
+            full_res = response.text
+            
+            if "[TURKISH_SUMMARY]" in full_res:
+                parts = full_res.split("[TURKISH_SUMMARY]")
+                patient_msg = parts[0].strip()
+                turk_msg = parts[1].strip()
+            else:
+                patient_msg = full_res
+                turk_msg = full_res
 
-# قسم تحليل الصور والكاميرا
-st.subheader(camera_label)
-captured_image = st.camera_input("كاميرا الهاتف / Mobile Camera")
+            st.session_state.patient_summary = turk_msg
+            
+            st.success("تم إرسال الأعراض للطبيب المعالج!")
+            st.write("💬 **رد موساعد الصوتي للمريض:**", patient_msg)
+            
+            tts = gTTS(text=patient_msg, lang=tts_lang)
+            tts.save("patient_res.mp3")
+            st.audio("patient_res.mp3", autoplay=True)
 
-if captured_image is not None:
-    image = Image.open(captured_image)
-    st.image(image, caption="الصورة الملتقطة", use_container_width=True)
+    # عرض رد الطبيب الصوتي والوصفة فور صدورهما
+    if os.path.exists("doctor_voice.mp3"):
+        st.markdown("---")
+        st.success("🔔 وصلك رد صوتي جديد من الطبيب المعالج + الوصفة الطبية!")
+        st.audio("doctor_voice.mp3", autoplay=True)
+
+# ==================== 👨‍⚕️ بوابة الطبيب والمناقشة ====================
+with col_doctor:
+    st.header("👨‍⚕️ بوابة الطبيب (Doctor & AI Discussion)")
     
-    with st.spinner("جاري تحليل الصورة طبياً... / Analyzing image..."):
-        img_prompt = f"""
-        أنت المساعد الطبي الذكي 'موساعد'. حلل هذه الصورة الطبية.
-        قدم للمريض ملاحظات وتوجيهات أولية دقيقة باللغة: {user_lang}.
-        """
-        img_response = model.generate_content([img_prompt, image])
-        st.success("تم تحليل الصورة بنجاح!")
-        st.write(f"🩺 **نتيجة تحليل الصورة ({user_lang}):**\n", img_response.text)
-
-st.markdown("---")
-
-# قسم جدول الأدوية والمتابعة اليومية
-st.subheader(med_label)
-col1, col2 = st.columns(2)
-
-with col1:
-    medicine_name = st.text_input("اسم الدواء / İlaç Adı / Medicine Name:")
-    medicine_time = st.text_input("مواعيد الجرعات (مثال: صباحاً ومساءً):")
-    if st.button("💾 حفظ في جدول الأدوية"):
-        if medicine_name:
-            st.success(f"تمت إضافة الدواء ({medicine_name}) بنجاح إلى جدول المتابعة!")
-        else:
-            st.error("يرجى إدخال اسم الدواء.")
-
-with col2:
-    st.markdown("### 📊 المتابعة اليومية للحالة")
-    temp_check = st.slider("مستوى الحرارة أو شعور الألم (1 إلى 10):", 1, 10, 5)
-    daily_note = st.text_area("سجل تطور الأعراض اليوم (مثال: شعرت بتحسن طفيف):")
-    if st.button("📤 إرسال تقرير المتابعة للطبيب"):
-        st.info("تم تسجيل ومزامنة بيانات المتابعة اليومية بنجاح لتكون جاهزة لاطلاع الطبيب المعالج.")
+    if st.session_state.patient_summary:
+        st.subheader("📋 Tıbbi Danışma (AI & Doctor Discussion):")
+        st.info(st.session_state.patient_summary)
+        
+        st.markdown("---")
+        st.subheader("✍️ تشخيص الطبيب والوصفة الطبية:")
+        doc_diagnosis = st.text_area("التشخيص الطبي والتعليمات (Doctor's Diagnosis):")
+        doc_meds = st.text_area("الوصفة الطبية والأدوية (Prescription Medications):")
+        
+        if st.button("🚀 تحويل تشخيص الطبيب لرد صوتي للمريض + PDF"):
+            if doc_diagnosis:
+                with st.spinner("جاري تحويل كلام الطبيب لصوت المريض وإنشاء الوصفة..."):
+                    # موساعد يصيغ كلام الطبيب والوصفة للمريض باللغة المناسبة
+                    doc_prompt = f"""
+                    أنت المساعد 'موساعد'. قم بتحويل تشخيص الطبيب التالي: "{doc_diagnosis}"
+                    والأدوية الموصوفة: "{doc_meds}"
+                    إلى رسالة صوتية مشجعة وواضحة للمريض باللغة: {user_lang}.
+                    يشرح له فيها اسم المرض بوضوح وطريقة أخذ الدواء.
+                    """
+                    translated_res = model.generate_content(doc_prompt).text
+                    
+                    # تحويل رد الطبيب إلى صوت
+                    tts_doc = gTTS(text=translated_res, lang=tts_lang)
+                    tts_doc.save("doctor_voice.mp3")
+                    
+                    # إنشاء ملف PDF للوصفة
+                    pdf_file = create_pdf_report(doc_diagnosis, doc_meds)
+                    
+                    st.success("تم تحويل تشخيص الطبيب لصوت وإصدار ملف PDF الوصفة بنجاح!")
+                    
+                    with open(pdf_file, "rb") as f:
+                        st.download_button(
+                            label="📥 تحميل الوصفة الطبية (PDF Prescription)",
+                            data=f,
+                            file_name="Mosaid_Prescription.pdf",
+                            mime="application/pdf"
+                        )
+                    st.rerun()
+            else:
+                st.error("يرجى كتابة التشخيص الطبي قبل إرساله.")
+    else:
+        st.write("👈 بانتظار تسجيل صوت المريض لبدء المناقشة الطبية.")
+    

@@ -39,7 +39,7 @@ def create_pdf_report(doc_text, med_list, diet_plan=""):
 
 st.title("🩺 Mosaid Medical System - منظومة موساعد الطبية الشاملة")
 
-# اختيار اللغة
+# 1. اختيار اللغة والمترجم الطبي
 lang_choice = st.selectbox(
     "🌐 اختر لغة التواصل / Select Language:",
     ["العربية (Arabic)", "Türkçe (Turkish)", "English"]
@@ -53,19 +53,24 @@ st.markdown("---")
 # تقسيم الشاشة إلى بوابتين (المريض والطبيب)
 col_patient, col_doctor = st.columns(2)
 
-# ==================== 👤 بوابة المريض الشاملة ====================
+# ==================== 👤 بوابة المريض ====================
 with col_patient:
     st.header("👤 بوابة المريض (Patient Portal)")
     
-    # 1. قسم الطوارئ والتنبيه السريع
+    # 5. قسم الطوارئ والتنبيه السريع
     st.subheader("🚨 كشف الطوارئ السريع (Emergency Check)")
     is_emergency = st.checkbox("⚠️ هل تشعر بألم حاد في الصدر، ضيق تنفس شديد، أو فقدان وعي؟")
     if is_emergency:
         st.error("🚨 **حالة طارئة!** يرجى الاتصال بالإسعاف فوراً (112 في تركيا) أو التوجه لأقرب مستشفى.")
-    
+
+    # 10. قسم الإسعافات الأولية الإرشادية
+    with st.expander("🩹 دليل الإسعافات الأولية السريعة (First Aid Instructions)"):
+        st.write("**الاختناق:** ابدأ بضغطات البطن (مناورة هيمليك) فوراً.")
+        st.write("**الجروح والحروق:** اغسل بالماء البارد وضع ضاغطاً معقماً دون فتح الفقاعات.")
+
     st.markdown("---")
     
-    # 2. التواصل الصوتي
+    # 2. التواصل الصوتي ومتابعة الأعراض
     st.subheader("🎙️ سجل أعراضك بالصوت:")
     user_audio = st.audio_input("تسجيل الصوت / Audio Record")
 
@@ -98,9 +103,9 @@ with col_patient:
             tts.save("patient_res.mp3")
             st.audio("patient_res.mp3", autoplay=True)
 
-    # 3. كاميرا الفحص الجلدي والصور
+    # 9. كاميرا التشخيص والتمرير
     st.markdown("---")
-    st.subheader("📸 كاميرا الفحص وتصوير الأدوية:")
+    st.subheader("📸 كاميرا الفحص وتصوير الأدوية والجلد:")
     captured_image = st.camera_input("التقط صورة للجلد أو الدواء")
     if captured_image is not None:
         image = Image.open(captured_image)
@@ -110,7 +115,7 @@ with col_patient:
             st.success("تم تحليل الصورة!")
             st.write(img_res)
 
-    # 4. رد الطبيب والوصفة
+    # 7. رد صوت الطبيب والوصفة
     if os.path.exists("doctor_voice.mp3"):
         st.markdown("---")
         st.success("🔔 وصلك رد صوتي جديد من الطبيب المعالج + الوصفة الطبية!")
@@ -129,7 +134,7 @@ with col_doctor:
         doc_diagnosis = st.text_area("التشخيص الطبي (Diagnosis):")
         doc_meds = st.text_area("الأدوية الموصوفة (Prescription):")
         
-        # 5. فحص تضارب الأدوية الذكي
+        # 3. فحص تضارب الأدوية
         if st.button("🔍 فحص تضارب الأدوية تلقائياً (Check Drug Interactions)"):
             if doc_meds:
                 with st.spinner("جاري فحص التضارب الدوائي..."):
@@ -139,7 +144,7 @@ with col_doctor:
             else:
                 st.error("يرجى إدخال اسم الدواء أولاً.")
 
-        # 6. النظام الغذائي والنصائح
+        # 6. النظام الغذائي
         doc_diet = st.text_area("🍎 النظام الغذائي والممنوعات (Dietary Advice):")
         
         if st.button("🚀 إرسال الرد الصوتي للمريض + إصدار PDF"):
@@ -165,7 +170,7 @@ with col_doctor:
             else:
                 st.error("يرجى كتابة التشخيص أولاً.")
 
-    # 7. السجل الطبي التراكمي للحالة
+    # 8. السجل الطبي التراكمي
     st.markdown("---")
     st.subheader("📁 السجل الطبي التراكمي للمريض (Medical Record):")
     if st.session_state.medical_history:
@@ -174,10 +179,9 @@ with col_doctor:
     else:
         st.caption("لا توجد سجلات سابقة بعد.")
 
-    # 8. حجز موعد للعيادة
+    # 4. حجز موعد العيادة
     st.markdown("---")
     st.subheader("📅 حجز موعد في العيادة (Appointment Booking):")
     app_date = st.date_input("اختر تاريخ الموعد:")
     if st.button("📧 تأكيد وحجز الموعد"):
         st.success(f"تم تسجيل الموعد بتاريخ {app_date} وإرسال إشعار للعيادة بنجاح!")
-    

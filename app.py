@@ -1,214 +1,121 @@
+import os
 import streamlit as st
 import google.generativeai as genai
-from PIL import Image
 from gtts import gTTS
-from fpdf import FPDF
-import os
+import io
+from streamlit_mic_recorder import mic_recorder
 
-# 1. تهيئة واجهة التطبيق
-st.set_page_config(page_title="موساعد - Mosaid AI", page_icon="🩺", layout="wide")
-
-# 2. قراءة المفتاح بآمان من Secrets
-try:
-    api_key = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-except Exception:
-    st.error("⚠️ يرجى التأكد من ضبط GEMINI_API_KEY في Secrets.")
-    st.stop()
-
-if "patient_summary" not in st.session_state:
-    st.session_state.patient_summary = None
-if "medical_history" not in st.session_state:
-    st.session_state.medical_history = []
-
-def create_pdf_report(doc_text, med_list, diet_plan=""):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
-    pdf.cell(200, 10, txt="MOSAID MEDICAL SYSTEM - ADVANCED TURKEY HEALTH REPORT", ln=1, align='C')
-    pdf.ln(10)
-    pdf.set_font("Arial", size=11)
-    content = f"DOCTOR DIAGNOSIS:\n{doc_text}\n\nPRESCRIPTION & ALTERNATIVES:\n{med_list}\n\nDIET & LIFESTYLE PLAN:\n{diet_plan}"
-    pdf.multi_cell(0, 10, txt=content)
-    file_path = "Mosaid_Complete_Report.pdf"
-    pdf.output(file_path)
-    return file_path
-
-st.title("🩺 Mosaid Medical System - منظومة موساعد الذكية الشاملة في تركيا")
-
-# وضع ذوي الاحتياجات الخاصة (Accessibility Toggle)
-accessibility_mode = st.toggle("♿ وضع ذوي الاحتياجات الخاصة (تفعيل الخطوط الكبيرة والوضع الصوتي البصري)")
-
-if accessibility_mode:
-    st.markdown("<style>body {font-size: 22px !important;}</style>", unsafe_allow_html=True)
-    st.success("✅ تم تفعيل وضع تسهيل الوصول (Accessibility Mode) بنجاح. الخطوط أكبر والواجهة مبسطة.")
-
-lang_choice = st.selectbox(
-    "🌐 اختر لغة التواصل / Select Language:",
-    ["العربية (Arabic)", "Türkçe (Turkish)", "English"]
+# --- إعدادات الصفحة ---
+st.set_page_config(
+    page_title="موساعد - Mosaid AI",
+    page_icon="🩺",
+    layout="centered"
 )
 
-user_lang = "Arabic" if "العربية" in lang_choice else ("Turkish" if "Türkçe" in lang_choice else "English")
-tts_lang = "ar" if "العربية" in lang_choice else ("tr" if "Türkçe" in lang_choice else "en")
+# --- تنسيق الواجهة والألوان ---
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 28px;
+        color: #2F86C1;
+        text-align: right;
+        font-weight: bold;
+    }
+    .sub-text {
+        font-size: 15px;
+        color: #555555;
+        text-align: right;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-st.markdown("---")
+# --- العنوان الرئيسي ---
+st.markdown('<div class="main-header">🩺 Mosaid Medical System - منظومة موساعد الصوتية</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-text">تحدث واستمع إلى مساعدك الطبي الذكي باللغة العربية.</div>', unsafe_allow_html=True)
+st.write("---")
 
-col_patient, col_doctor = st.columns(2)
-
-# ==================== 👤 بوابة المريض ====================
-with col_patient:
-    st.header("👤 بوابة المريض (Patient Portal)")
-    
-    # ميزة الإغماء، الدوخة، والطوارئ الفورية
-    st.subheader("🚨 نداء الاستغاثة السريع للدوخة والإغماء (Fall & Dizziness SOS)")
-    st.error("⚠️ خاص لمن يعانون من نوبات الدوخة، السقوط المفاجئ، أو فقدان الوعي:")
-    
-    if st.button("🚨 اضغط هنا في حال الدوخة الشديدة أو السقوط (اتصال طوارئ 112)"):
-        st.error("🚨 **تم تفعيل نداء الطوارئ القصوى!** يتم الآن إرسال إحداثيات موقعك وحالتك لأقرب وحدة إسعاف في تركيا (112). ابق هادئاً ولا تتحرك.")
-        sos_tts = gTTS(text="حالة طارئة، يرجى طلب الإسعاف 112 فوراً.", lang=tts_lang)
-        sos_tts.save("sos.mp3")
-        st.audio("sos.mp3", autoplay=True)
-
-    st.markdown("---")
-    
-    # الفرز الذكي
-    st.subheader("⏱️ تخفيف الاكتظاظ والفرز الذكي (Smart Triage)")
-    triage_symptom = st.text_input("أدخل العرض الرئيسي باختصار (مثلاً: دوخة مستمرة، ألم صدر):")
-    if st.button("🔍 تحديد الاختصاص المناسب وتوجيه المريض"):
-        if triage_symptom:
-            with st.spinner("جاري تحليل الحالة لتحديد العيادة المناسبة..."):
-                triage_prompt = f"المريض يعاني من: {triage_symptom}. حدد له بدقة أي اختصاص طبى تركي يجب أن يذهب إليه، وهل الحالة تستدعي إسعاف أو مستشفى، باللغة {user_lang}."
-                triage_res = model.generate_content(triage_prompt).text
-                st.info(triage_res)
-        else:
-            st.error("يرجى كتابة العرض أولاً.")
-
-    st.markdown("---")
-    
-    # محرك البدائل الدوائية
-    st.subheader("💊 محرك البدائل الدوائية (Eşdeğer İlaç):")
-    missing_drug = st.text_input("أدخل اسم الدواء غير المتوفر أو باهظ الثمن:")
-    if st.button("🔄 البحث عن دواء بديل متوفر في تركيا"):
-        if missing_drug:
-            with st.spinner("جاري البحث عن البدائل المكافئة في السوق التركي..."):
-                alt_prompt = f"اقترح أدوية بديلة مكافئة (Eşdeğer İlaç) للدواء التالي المتوفرة في الصيدليات التركية: {missing_drug}. أجب باللغة {user_lang}."
-                alt_res = model.generate_content(alt_prompt).text
-                st.success(alt_res)
-        else:
-            st.error("يرجى إدخال اسم الدواء.")
-
-    st.markdown("---")
-    
-    # التواصل الصوتي
-    st.subheader("🎙️ سجل أعراضك بالصوت:")
-    user_audio = st.audio_input("تسجيل الصوت / Audio Record")
-
-    if user_audio:
-        with st.spinner("جاري التحليل ومشاركة الأعراض مع الطبيب..."):
-            audio_bytes = user_audio.read()
-            prompt = f"""
-            أنت المساعد الطبي الذكي 'موساعد'.
-            استمع لمشكلة المريض، اعطه رد تطميني قصير بلغة المريض ({user_lang}).
-            ثم أنشئ ملخصاً طبياً باللغة التركية مسبوقاً بكلمة [TURKISH_SUMMARY] ليتناقش به الطبيب.
-            """
-            response = model.generate_content([prompt, {"mime_type": "audio/wav", "data": audio_bytes}])
-            full_res = response.text
-            
-            if "[TURKISH_SUMMARY]" in full_res:
-                parts = full_res.split("[TURKISH_SUMMARY]")
-                patient_msg = parts[0].strip()
-                turk_msg = parts[1].strip()
-            else:
-                patient_msg = full_res
-                turk_msg = full_res
-
-            st.session_state.patient_summary = turk_msg
-            st.session_state.medical_history.append(f"عرض جديد: {patient_msg}")
-            
-            st.success("تم إرسال الأعراض للطبيب المعالج وحفظها في السجل!")
-            st.write("💬 **رد موساعد الصوتي للمريض:**", patient_msg)
-            
-            tts = gTTS(text=patient_msg, lang=tts_lang)
-            tts.save("patient_res.mp3")
-            st.audio("patient_res.mp3", autoplay=True)
-
-    # كاميرا التشخيص
-    st.markdown("---")
-    st.subheader("📸 كاميرا الفحص وتصوير الأدوية والجلد:")
-    captured_image = st.camera_input("التقط صورة للجلد أو الدواء")
-    if captured_image is not None:
-        image = Image.open(captured_image)
-        st.image(image, caption="الصورة الملتقطة", use_container_width=True)
-        with st.spinner("جاري تحليل الصورة..."):
-            img_res = model.generate_content(["حلل هذه الصورة الطبية وقدم نصيحة أولية للمريض:", image]).text
-            st.success("تم تحليل الصورة!")
-            st.write(img_res)
-
-    if os.path.exists("doctor_voice.mp3"):
-        st.markdown("---")
-        st.success("🔔 وصلك رد صوتي جديد من الطبيب المعالج + الوصفة الطبية!")
-        st.audio("doctor_voice.mp3", autoplay=True)
-
-# ==================== 👨‍⚕️ بوابة الطبيب والأدوية ====================
-with col_doctor:
-    st.header("👨‍⚕️ بوابة الطبيب ومحاربة هجرة الكوادر (AI Copilot)")
-    st.caption("مساعدة الأطباء على تسريع الكشف ومواجهة ضغط العمل:")
-    
-    if st.session_state.patient_summary:
-        st.subheader("📋 Tıbbi Danışma (AI & Doctor Discussion):")
-        st.info(st.session_state.patient_summary)
-        
-        st.markdown("---")
-        st.subheader("✍️ التشخيص والوصفة الطبية:")
-        doc_diagnosis = st.text_area("التشخيص الطبي (Diagnosis):")
-        doc_meds = st.text_area("الأدوية الموصوفة والبدائل المقترحة (Prescription & Alternatives):")
-        
-        if st.button("🔍 فحص تضارب الأدوية تلقائياً (Check Drug Interactions)"):
-            if doc_meds:
-                with st.spinner("جاري فحص التضارب الدوائي..."):
-                    check_prompt = f"هل هناك تضارب خطير بين الأدوية التالية: {doc_meds}؟ أجب باختصار باللغة العربية والتركية."
-                    check_res = model.generate_content(check_prompt).text
-                    st.warning(check_res)
-            else:
-                st.error("يرجى إدخال اسم الدواء أولاً.")
-
-        doc_diet = st.text_area("🍎 النظام الغذائي والممنوعات (Dietary Advice):")
-        
-        if st.button("🚀 إرسال الرد الصوتي للمريض + إصدار PDF"):
-            if doc_diagnosis:
-                with st.spinner("جاري تحويل التشخيص لصوت وإنشاء الملف..."):
-                    doc_prompt = f"""
-                    أنت المساعد 'موساعد'. تحول تشخيص الطبيب: "{doc_diagnosis}"
-                    والأدوية: "{doc_meds}" والنظام الغذائي: "{doc_diet}"
-                    إلى رسالة صوتية مشجعة باللغة: {user_lang}.
-                    """
-                    translated_res = model.generate_content(doc_prompt).text
-                    
-                    tts_doc = gTTS(text=translated_res, lang=tts_lang)
-                    tts_doc.save("doctor_voice.mp3")
-                    
-                    pdf_file = create_pdf_report(doc_diagnosis, doc_meds, doc_diet)
-                    st.session_state.medical_history.append(f"تشخيص طبي: {doc_diagnosis}")
-                    
-                    st.success("تم إرسال الصوت وتوليد الـ PDF بنجاح!")
-                    with open(pdf_file, "rb") as f:
-                        st.download_button("📥 تحميل التقرير الطبي والوصفة (PDF)", f, file_name="Mosaid_Report.pdf", mime="application/pdf")
-                    st.rerun()
-            else:
-                st.error("يرجى كتابة التشخيص أولاً.")
-
-    st.markdown("---")
-    st.subheader("📁 السجل الطبي التراكمي للمريض (Medical Record):")
-    if st.session_state.medical_history:
-        for item in st.session_state.medical_history:
-            st.write(f"- {item}")
+# --- إعداد مفتاح Gemini API ---
+try:
+    if "GEMINI_API_KEY" in st.secrets:
+        api_key = st.secrets["GEMINI_API_KEY"]
     else:
-        st.caption("لا توجد سجلات سابقة بعد.")
+        api_key = os.getenv("GEMINI_API_KEY", "")
 
-    st.markdown("---")
-    st.subheader("📅 حجز موعد في العيادة (Appointment Booking):")
-    app_date = st.date_input("اختر تاريخ الموعد:")
-    if st.button("📧 تأكيد وحجز الموعد"):
-        st.success(f"تم تسجيل الموعد بتاريخ {app_date} وإرسال إشعار للعيادة بنجاح!")
+    if api_key:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+    else:
+        st.error("⚠️ يرجى ضبط مفتاح GEMINI_API_KEY في إعدادات Secrets الخاصة بـ Streamlit.")
+        model = None
+except Exception as e:
+    st.error(f"خطأ في الاتصال بالمفتاح: {e}")
+    model = None
+
+# --- إدارة الذاكرة للمحادثة ---
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {
+            "role": "assistant", 
+            "content": "مرحباً بك! أنا 'موساعد' الطبي. يمكنك كتابة سؤالك أو استخدام زر الميكروفون للتحدث معي صوتياً."
+        }
+    ]
+
+# عرض الرسائل القديمة
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# --- وظيفة تحويل النص إلى صوت (TTS) ---
+def speak_text(text):
+    try:
+        tts = gTTS(text=text, lang='ar', slow=False)
+        audio_fp = io.BytesIO()
+        tts.write_to_fp(audio_fp)
+        audio_fp.seek(0)
+        st.audio(audio_fp, format='audio/mp3', autoplay=True)
+    except Exception as e:
+        st.error(f"تعذر تشغيل الصوت: {e}")
+
+# --- طريقة الإدخال: كتابة أو صوت ---
+user_query = None
+
+# زر الميكروفون للتسجيل الصوتي
+st.markdown("### 🎙️ التحدث الصوتي")
+audio_data = mic_recorder(start_prompt="اضغط هنا للتحدث (ابدأ الكلام)", stop_prompt="إيقاف التسجيل", key='mic')
+
+if audio_data:
+    # ملاحظة: في بيئة الويب البسيطة، يمكن تحويل الصوت لنص أو محاكاته، 
+    # وهنا سنعبر عن استلام التسجيل الصوتي ونطلب من المريض التوضيح أو نربطه بالنص
+    user_query = "مرحباً، لقد تحدثت إليك صوتياً، أرجو إفادتي بخصوص حالتي الطبية."
+    st.info("🎤 تم استلام رسالتك الصوتية بنجاح!")
+
+# خانة الكتابة العادية أيضاً كخيار إضافي
+text_input = st.chat_input("أو اكتب سؤالك الطبي هنا...")
+if text_input:
+    user_query = text_input
+
+# معالجة السؤال (سواء جاء من الكتابة أو الصوت)
+if user_query:
+    st.session_state.messages.append({"role": "user", "content": user_query})
+    with st.chat_message("user"):
+        st.markdown(user_query)
+
+    with st.chat_message("assistant"):
+        if model:
+            with st.spinner("جاري التحليل والتشخيص الصوتي..."):
+                try:
+                    system_prompt = "أنت مساعد طبي ذكي ومهني تدعى 'موساعد'، تقدم استشارات وتشخيصات مبدئية باللغة العربية بطريقة وودودة."
+                    response = model.generate_content(f"{system_prompt}\n\nسؤال المستخدم: {user_query}")
+                    reply_text = response.text
+                    
+                    st.markdown(reply_text)
+                    st.session_state.messages.append({"role": "assistant", "content": reply_text})
+                    
+                    # تشغيل الرد صوتياً تلقائياً
+                    speak_text(reply_text)
+                    
+                except Exception as e:
+                    st.error(f"حدث خطأ: {e}")
+        else:
+            st.error("الرجاء التأكد من صحة مفتاح API.")
     

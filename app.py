@@ -17,29 +17,26 @@ except Exception:
     st.error("⚠️ يرجى التأكد من ضبط GEMINI_API_KEY في Secrets.")
     st.stop()
 
-# إدارة جلسة البيانات المؤقتة والسجل الطبي
 if "patient_summary" not in st.session_state:
     st.session_state.patient_summary = None
 if "medical_history" not in st.session_state:
     st.session_state.medical_history = []
 
-# دالة إنشاء تقرير PDF للوصفة والسجل الطبي
 def create_pdf_report(doc_text, med_list, diet_plan=""):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", 'B', 14)
-    pdf.cell(200, 10, txt="MOSAID MEDICAL SYSTEM - COMPLETE REPORT & PRESCRIPTION", ln=1, align='C')
+    pdf.cell(200, 10, txt="MOSAID MEDICAL SYSTEM - TURKEY HEALTH SOLUTION REPORT", ln=1, align='C')
     pdf.ln(10)
     pdf.set_font("Arial", size=11)
-    content = f"DOCTOR DIAGNOSIS:\n{doc_text}\n\nPRESCRIPTION / MEDICATIONS:\n{med_list}\n\nDIET & LIFESTYLE PLAN:\n{diet_plan}"
+    content = f"DOCTOR DIAGNOSIS:\n{doc_text}\n\nPRESCRIPTION & ALTERNATIVES:\n{med_list}\n\nDIET & LIFESTYLE PLAN:\n{diet_plan}"
     pdf.multi_cell(0, 10, txt=content)
     file_path = "Mosaid_Complete_Report.pdf"
     pdf.output(file_path)
     return file_path
 
-st.title("🩺 Mosaid Medical System - منظومة موساعد الذكية المتطورة")
+st.title("🩺 Mosaid Medical System - الحل الذكي لتحديات القطاع الصحي في تركيا")
 
-# اختيار اللغة والمترجم الطبي
 lang_choice = st.selectbox(
     "🌐 اختر لغة التواصل / Select Language:",
     ["العربية (Arabic)", "Türkçe (Turkish)", "English"]
@@ -56,24 +53,32 @@ col_patient, col_doctor = st.columns(2)
 with col_patient:
     st.header("👤 بوابة المريض (Patient Portal)")
     
-    # قسم الطوارئ والتنبيه السريع
-    st.subheader("🚨 كشف الطوارئ السريع (Emergency Check)")
-    is_emergency = st.checkbox("⚠️ هل تشعر بألم حاد في الصدر، ضيق تنفس شديد، أو فقدان وعي؟")
-    if is_emergency:
-        st.error("🚨 **حالة طارئة!** يرجى الاتصال بالإسعاف فوراً (112 في تركيا) أو التوجه لأقرب مستشفى.")
+    # حل لمشكلة الاكتظاظ وطول المواعيد: الفرز الذكي
+    st.subheader("⏱️ تخفيف الاكتظاظ والفرز الذكي (Smart Triage)")
+    st.caption("تجنب طوابير الانتظار الطويلة في المشافي الحكومية عبر الفحص المبدئي السريع:")
+    triage_symptom = st.text_input("أدخل العرض الرئيسي باختصار (مثلاً: ألم أسنان، حرارة مرتفعة):")
+    if st.button("🔍 تحديد الاختصاص المناسب وتوجيه المريض"):
+        if triage_symptom:
+            with st.spinner("جاري تحليل الحالة لتحديد العيادة المناسبة..."):
+                triage_prompt = f"المريض يعاني من: {triage_symptom}. حدد له بدقة أي اختصاص طبى تركي يجب أن يذهب إليه، وهل الحالة تستدعي مستشفى حكومي أم عيادة منزلية، باللغة {user_lang}."
+                triage_res = model.generate_content(triage_prompt).text
+                st.info(triage_res)
+        else:
+            st.error("يرجى كتابة العرض أولاً.")
 
-    # دليل التشخيص السريع للأمراض الشائعة
-    with st.expander("🩺 مرجع التشخيص السريع للأمراض الشائعة (Common Illnesses Guide)"):
-        selected_illness = st.selectbox(
-            "اختر الحالة للاطلاع على الأعراض والتوجيه المبدئي:",
-            ["اختر مرضاً...", "الأنفلونزا ونزلة البرد", "الشقيقة (الصداع النصفي)", "التهاب المعدة والقولون", "حساسية الجلد والطفح", "ارتفاع السكري"]
-        )
-        if selected_illness != "اختر مرضاً...":
-            if st.button("🔍 عرض تفاصيل وتشخيص الحالة"):
-                with st.spinner("جاري جلب التشخيص والتوجيه الطبي..."):
-                    ill_prompt = f"قدم تشخيصاً مبدئياً، الأعراض الشائعة، والخطوات الأولى للتعامل مع مرض ({selected_illness}) باللغة {user_lang}."
-                    ill_res = model.generate_content(ill_prompt).text
-                    st.info(ill_res)
+    st.markdown("---")
+    
+    # حل لمشكلة نقص الأدوية: البحث عن البدائل التركية المتوفرة (Eşdeğer İlaç)
+    st.subheader("💊 محبحث البدائل الدوائية (أثناء نقص الأدوية):")
+    missing_drug = st.text_input("أدخل اسم الدواء غير المتوفر أو باهظ الثمن:")
+    if st.button("🔄 البحث عن دواء بديل متوفر في تركيا"):
+        if missing_drug:
+            with st.spinner("جاري البحث عن البدائل المكافئة في السوق التركي..."):
+                alt_prompt = f"اقترح أدوية بديلة مكافئة (Eşdeğer İlaç) للدواء التالي المتوفرة في الصيدليات التركية: {missing_drug}. أجب باللغة {user_lang}."
+                alt_res = model.generate_content(alt_prompt).text
+                st.success(alt_res)
+        else:
+            st.error("يرجى إدخال اسم الدواء.")
 
     st.markdown("---")
     
@@ -122,7 +127,6 @@ with col_patient:
             st.success("تم تحليل الصورة!")
             st.write(img_res)
 
-    # رد صوت الطبيب والوصفة
     if os.path.exists("doctor_voice.mp3"):
         st.markdown("---")
         st.success("🔔 وصلك رد صوتي جديد من الطبيب المعالج + الوصفة الطبية!")
@@ -130,7 +134,8 @@ with col_patient:
 
 # ==================== 👨‍⚕️ بوابة الطبيب والأدوية ====================
 with col_doctor:
-    st.header("👨‍⚕️ بوابة الطبيب والمناقشة الطبية")
+    st.header("👨‍⚕️ بوابة الطبيب ومحاربة هجرة الكوادر (AI Copilot)")
+    st.caption("مساعدة الأطباء على تسريع الكشف ومواجهة ضغط العمل:")
     
     if st.session_state.patient_summary:
         st.subheader("📋 Tıbbi Danışma (AI & Doctor Discussion):")
@@ -139,7 +144,7 @@ with col_doctor:
         st.markdown("---")
         st.subheader("✍️ التشخيص والوصفة الطبية:")
         doc_diagnosis = st.text_area("التشخيص الطبي (Diagnosis):")
-        doc_meds = st.text_area("الأدوية الموصوفة (Prescription):")
+        doc_meds = st.text_area("الأدوية الموصوفة والبدائل المقترحة (Prescription & Alternatives):")
         
         # فحص تضارب الأدوية
         if st.button("🔍 فحص تضارب الأدوية تلقائياً (Check Drug Interactions)"):
@@ -151,7 +156,6 @@ with col_doctor:
             else:
                 st.error("يرجى إدخال اسم الدواء أولاً.")
 
-        # النظام الغذائي
         doc_diet = st.text_area("🍎 النظام الغذائي والممنوعات (Dietary Advice):")
         
         if st.button("🚀 إرسال الرد الصوتي للمريض + إصدار PDF"):
@@ -177,7 +181,6 @@ with col_doctor:
             else:
                 st.error("يرجى كتابة التشخيص أولاً.")
 
-    # السجل الطبي التراكمي
     st.markdown("---")
     st.subheader("📁 السجل الطبي التراكمي للمريض (Medical Record):")
     if st.session_state.medical_history:
@@ -186,7 +189,6 @@ with col_doctor:
     else:
         st.caption("لا توجد سجلات سابقة بعد.")
 
-    # حجز موعد العيادة
     st.markdown("---")
     st.subheader("📅 حجز موعد في العيادة (Appointment Booking):")
     app_date = st.date_input("اختر تاريخ الموعد:")

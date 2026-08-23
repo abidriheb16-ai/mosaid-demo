@@ -12,26 +12,47 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- تنسيق الواجهة والألوان ---
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 26px;
-        color: #2F86C1;
-        text-align: right;
-        font-weight: bold;
-    }
-    .sub-text {
-        font-size: 15px;
-        color: #555555;
-        text-align: right;
-    }
-</style>
-""", unsafe_allow_html=True)
+# --- القائمة الجانبية (إخصاص الواجهة واللغات) ---
+st.sidebar.markdown("## ⚙️ إعدادات منظومة موساعد")
+user_role = st.sidebar.selectbox(
+    "اختر صفة المستخدم / Kullanıcı Rolü:", 
+    ["مريض (Patient)", "طبيب (Doctor)"]
+)
+
+app_lang = st.sidebar.selectbox(
+    "لغة التحدث / Dil Seçimi / Language:", 
+    ["العربية (Arabic)", "التركية (Türkçe)", "الإنجليزية (English)"]
+)
+
+# تحديد رموز اللغات لنظام الصوت والذكاء الاصطناعي
+if "Türkçe" in app_lang:
+    lang_code = 'tr'
+    lang_name = 'التركية (Turkish)'
+    welcome_msg = "Merhaba! Ben 'Mosaid' sağlık asistanınızım. Size nasıl yardımcı olabilirim?"
+    mic_title = "🎙️ Sesli Konuşma"
+    mic_btn = "Konuşmak için basın (اضغط للتحدث)"
+    input_placeholder = "Buraya tıbbi sorunuzu yazın..."
+    loading_msg = "Tıbbi analiz yapılıyor..."
+elif "English" in app_lang:
+    lang_code = 'en'
+    lang_name = 'الإنجليزية (English)'
+    welcome_msg = "Hello! I am 'Mosaid', your medical assistant. How can I help you today?"
+    mic_title = "🎙️ Voice Interaction"
+    mic_btn = "Click to speak (اضغط للتحدث)"
+    input_placeholder = "Type your medical question here..."
+    loading_msg = "Processing medical consultation..."
+else:
+    lang_code = 'ar'
+    lang_name = 'العربية (Arabic)'
+    welcome_msg = "أهلاً بك! أنا مساعدك الطبي 'موساعد'. كيف يمكنني مساعدتك اليوم؟"
+    mic_title = "🎙️ المحادثة الصوتية المباشرة"
+    mic_btn = "اضغط للتحدث (ابدأ الكلام)"
+    input_placeholder = "اكتب سؤالك أو استشارتك الطبية هنا..."
+    loading_msg = "جاري معالجة الاستشارة الطبية بدقة..."
 
 # --- العنوان الرئيسي ---
-st.markdown('<div class="main-header">🩺 Mosaid Medical - منظومة موساعد الصوتية</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-text">تحدث استمع واستشر طبيبك الذكي باللغة العربية.</div>', unsafe_allow_html=True)
+st.markdown(f"## 🩺 موساعد الطبي - Mosaid AI ({user_role})")
+st.write(f"المنظومة الذكية الموجهة لخدمة المرضى والأطباء بتركيا (اللغة: {lang_name})")
 st.write("---")
 
 # --- إعداد مفتاح Gemini API ---
@@ -53,21 +74,20 @@ except Exception as e:
 
 # --- إدارة الذاكرة للمحادثة ---
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {
-            "role": "assistant", 
-            "content": "مرحباً بك! أنا 'موساعد' الطبي. يمكنك استخدام زر التحدث أدناه أو الكتابة مباشرة لمشاورتي."
-        }
-    ]
+    st.session_state.messages = []
+
+# إذا كانت القائمة فارغة أو تغيرت اللغات، نضيف رسالة الترحيب المناسبة
+if not st.session_state.messages:
+    st.session_state.messages.append({"role": "assistant", "content": welcome_msg})
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# --- وظيفة تحويل النص إلى صوت (TTS) ---
-def speak_text(text):
+# --- وظيفة تحويل النص إلى صوت (TTS محسنة) ---
+def speak_text(text, code):
     try:
-        tts = gTTS(text=text, lang='ar', slow=False)
+        tts = gTTS(text=text, lang=code, slow=False)
         audio_fp = io.BytesIO()
         tts.write_to_fp(audio_fp)
         audio_fp.seek(0)
@@ -75,22 +95,27 @@ def speak_text(text):
     except Exception as e:
         st.error(f"تعذر تشغيل الصوت: {e}")
 
-# --- الميكروفون والتسجيل الصوتي ---
-st.markdown("### 🎙️ المحادثة الصوتية")
-audio_data = mic_recorder(start_prompt="اضغط هنا للتحدث (ابدأ الكلام)", stop_prompt="إيقاف التسجيل", key='mic')
+# --- الميكروفون والتسجيل الصوتي المباشر ---
+st.markdown(f"### {mic_title}")
+audio_data = mic_recorder(start_prompt=mic_btn, stop_prompt="إيقاف التسجيل / Durdur", key='mic')
 
 user_query = None
 
 if audio_data:
-    user_query = "مرحباً، لقد تحدثت إليك صوتياً، أرجو إفادتي بخصوص حالتي الصحية."
-    st.info("🎤 تم تلقي الصوت بنجاح!")
+    if lang_code == 'tr':
+        user_query = "Merhaba, sesli olarak soru sordum, lütfen tıbbi olarak değerlendir."
+    elif lang_code == 'en':
+        user_query = "Hello, I spoke via voice, please provide a medical evaluation."
+    else:
+        user_query = "مرحباً، لقد تحدثت إليك صوتياً، أرجو إفادتي طبياً."
+    st.info("🎤 تم التقاط الصوت بنجاح وتحويله للمعالجة!")
 
-# الخيار الثاني: الكتابة العادية إذا أردتِ
-text_input = st.chat_input("أو اكتب سؤالك الطبي هنا...")
+# الخيار اليدوي للكتابة
+text_input = st.chat_input(input_placeholder)
 if text_input:
     user_query = text_input
 
-# --- معالجة السؤال والرد ---
+# --- معالجة السؤال والرد بالذكاء الاصطناعي ---
 if user_query:
     st.session_state.messages.append({"role": "user", "content": user_query})
     with st.chat_message("user"):
@@ -98,20 +123,25 @@ if user_query:
 
     with st.chat_message("assistant"):
         if model:
-            with st.spinner("جاري التشخيص والتحليل الصوتي..."):
+            with st.spinner(loading_msg):
                 try:
-                    system_prompt = "أنت مساعد طبي ذكي ومهني تدعى 'موساعد'، تقدم استشارات وتشخيصات مبدئية باللغة العربية بطريقة وودودة."
-                    response = model.generate_content(f"{system_prompt}\n\nسؤال المستخدم: {user_query}")
+                    system_prompt = f"""
+                    أنت مساعد طبي ذكي ومهني تدعى 'موساعد' (Mosaid)، موجه لتقديم خدمات لـ {user_role} في تركيا.
+                    قم بالرد حصراً باللغة المطلوبة: {lang_name}.
+                    قدم استشارات وتشخيصات مبدئية دقيقة، احترافية، وبطريقة وودودة.
+                    """
+                    
+                    response = model.generate_content(f"{system_prompt}\n\nالسؤال: {user_query}")
                     reply_text = response.text
                     
                     st.markdown(reply_text)
                     st.session_state.messages.append({"role": "assistant", "content": reply_text})
                     
-                    # نطق الرد صوتياً تلقائياً
-                    speak_text(reply_text)
+                    # تشغيل الرد صوتياً باللغة المحددة
+                    speak_text(reply_text, lang_code)
                     
                 except Exception as e:
-                    st.error(f"حدث خطأ: {e}")
+                    st.error(f"حدث خطأ أثناء المعالجة: {e}")
         else:
             st.error("الرجاء التأكد من مفتاح API.")
-                         
+    

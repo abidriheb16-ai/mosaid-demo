@@ -1,3 +1,6 @@
 streamlit
-streamlit-mic-recorder
-gTTS
+google-generativeai
+pillow
+gtts
+fpdf
+

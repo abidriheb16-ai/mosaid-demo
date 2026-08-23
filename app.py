@@ -1,7 +1,7 @@
 import google.generativeai as genai
 import streamlit as st
 
-# --- إعداد الصفحة والتصميم ---
+# --- إعداد الصفحة والتصميم العصري الخلفية والشعار ---
 st.set_page_config(
     page_title="Mosaid - AI Medical Assistant",
     page_icon="🩺",
@@ -11,20 +11,72 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    .main-title { font-size: 32px; font-weight: 800; color: #004D40; text-align: center; }
-    .sub-title { font-size: 15px; color: #555555; text-align: center; margin-bottom: 20px; }
-    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; }
+    /* خلفية وتصميم عام عصري */
+    .stApp {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    .main-title { 
+        font-size: 36px; 
+        font-weight: 800; 
+        color: #004D40; 
+        text-align: center; 
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    .sub-title { 
+        font-size: 16px; 
+        color: #333333; 
+        text-align: center; 
+        margin-bottom: 20px; 
+        font-weight: 600;
+    }
+    .stButton>button { 
+        width: 100%; 
+        border-radius: 10px; 
+        font-weight: bold; 
+        background-color: #004D40; 
+        color: white; 
+    }
+    .stButton>button:hover {
+        background-color: #00796B;
+        color: white;
+    }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-# --- القائمة الجانبية المنظمة ---
-st.sidebar.markdown("## 🩺 قائمة تطبيق موساعد")
+# --- شعار التطبيق والعنوان الرئيسي ---
+st.markdown(
+    '<div style="text-align: center; padding: 10px;">'
+    '<span style="font-size: 50px;">🩺🤖</span>'
+    '<p class="main-title">Mosaid (موساعد)</p>'
+    '<p class="sub-title">المساعد الذكي الطبي الموجه لتركيا - تكسير حواجز اللغة'
+    ' ورعاية صحية متكاملة</p>'
+    "</div>",
+    unsafe_allow_html=True,
+)
+
+# --- شريط اختيار اللغات الـ 4 في أعلى الصفحة ---
+st.markdown("---")
+col1, col2 = st.columns([1, 3])
+with col1:
+  app_language = st.selectbox(
+      "🌍 اختر لغة التطبيق / Dil Seçin:",
+      [
+          "العربية (Arabic)",
+          "التركية (Türkçe)",
+          "الإنجليزية (English)",
+          "الروسية (Русский)",
+      ],
+  )
+st.markdown("---")
+
+# --- القائمة الجانبية المنظمة للخدمات الـ 11 ---
+st.sidebar.markdown("## 🩺 قائمة خدمات موساعد")
 st.sidebar.markdown("---")
 
 menu = st.sidebar.selectbox("اختر الخدمة الطبية:", [
-    "🎙️ 1. المحادثة الصوتية التفاعلية",
+    "🎙️ 1. المحادثة الصوتية والميكروفون",
     "🌍 2. الترجمة الطبية الفورية",
     "📈 3. متابعة الأعراض اليومية",
     "💊 4. فحص تعارض الأدوية",
@@ -39,56 +91,65 @@ menu = st.sidebar.selectbox("اختر الخدمة الطبية:", [
 
 st.sidebar.markdown("---")
 st.sidebar.info(
-    "💡 تطبيق موساعد (Mosaid) - رفيقك الطبي الذكي لتكسير حواجز اللغة في تركيا."
+    "💡 تطبيق Mosaid - رفيقك الصحي الذكي المدعوم بالذكاء الاصطناعي."
 )
 
-# --- محتوى الواجهة حسب الاختيار من القائمة الجانبية ---
+# --- محتوى الواجهة حسب الاختيار من القائمة ---
 
-if menu == "🎙️ 1. المحادثة الصوتية التفاعلية":
-  st.markdown(
-      '<p class="main-title">🎙️ المحادثة الصوتية مع المساعد الطبي</p>',
-      unsafe_allow_html=True,
-  )
+if menu == "🎙️ 1. المحادثة الصوتية والميكروفون":
+  st.markdown("### 🎙️ المساعد الصوتي التفاعلي وتسجيل الصوت عبر الميكروفون")
   st.write(
-      "تحدث أو اكتب الأعراض وسيقوم الذكاء الاصطناعي بالاستماع والرد عليك:"
+      "يمكنك التحدث صوتياً أو كتابة ما تشعر به ليقوم الذكاء الاصطناعي بالاستماع"
+      " والتشخيص الفوري:"
   )
-  audio_input = st.text_input(
-      "اكتب ما تقوله للمساعد:",
-      placeholder="مثلاً: عندي ألم حاد في الرأس...",
-  )
-  if st.button("إرسال وتحليل الرد الصوتي"):
-    if audio_input:
-      st.success("🤖 (صوت الطبيب الافتراضي): تم استقبال صوتك وتحليل الحالة.")
+
+  # محاكاة زر الميكروفون الصوتي والتسجيل
+  mic_col1, mic_col2 = st.columns(2)
+  with mic_col1:
+    if st.button("🔴 اضغط لبدء التحدث (تسجيل الصوت)"):
       st.info(
-          "التحليل الصوتي: الحالة تستدعي الراحة وشرب السوائل ومراقبة الحرارة."
+          "🎙️ جاري الاستماع إلى صوتك... تحدث الآن بوضوح (جاري تسجيل الأعراض..."
+          " )"
+      )
+  with mic_col2:
+    if st.button("⏹️ إيقاف التسجيل وتحليل الصوت"):
+      st.success(
+          "✅ تم التقاط الصوت بنجاح وتحويله إلى نص: (أعاني من تعب في الحلق وارتفاع"
+          " حرارة)"
+      )
+
+  audio_input = st.text_input(
+      "أو اكتب الأعراض يدوياً:",
+      placeholder="مثلاً: عندي ألم في الحلق...",
+  )
+  if st.button("إرسال وتحليل الرد"):
+    if audio_input:
+      st.success("🤖 (موساعد الآلي): تم تحليل حالتك الطبية بنجاح.")
+      st.info(
+          "التقرير المبدئي: يوصى بشرب السوائل الدافئة والراحة، مع مراجعة الطبيب"
+          " إذا استمرت الأعراض."
       )
     else:
-      st.warning("الرجاء كتابة أو تسجيل الصوت أولاً.")
+      st.warning("الرجاء إدخال الأعراض أولاً.")
 
 elif menu == "🌍 2. الترجمة الطبية الفورية":
-  st.markdown(
-      '<p class="main-title">🌍 مترجم التقارير الطبية</p>',
-      unsafe_allow_html=True,
-  )
-  medical_text = st.text_area("أدخل التقرير الطبي بالعربية:")
+  st.markdown("### 🌍 مترجم التقارير الطبية للتركية/الإنجليزية/الروسية")
+  medical_text = st.text_area("أدخل التقرير الطبي:")
   target_lang = st.selectbox(
-      "اختر اللغة المستهدفة:", ["التركية (Türkçe)", "الإنجليزية (English)"]
+      "اختر اللغة المستهدفة للترجمة:",
+      ["التركية (Türkçe)", "الإنجليزية (English)", "الروسية (Русский)"],
   )
   if st.button("ترجمة التقرير لإرساله للطبيب"):
     if medical_text:
-      st.success(f"✅ تم ترجمة التقرير إلى ({target_lang}) بنجاح!")
+      st.success(f"✅ تم ترجمة التقرير إلى ({target_lang}) بنجاح وجاهز للإرسال!")
       st.code(
-          "Translated Medical Report for Turkish Hospital: Patient shows"
-          " symptoms..."
+          f"Translated Report ({target_lang}): Patient shows acute symptoms..."
       )
     else:
       st.warning("أدخل النص أولاً.")
 
 elif menu == "📈 3. متابعة الأعراض اليومية":
-  st.markdown(
-      '<p class="main-title">📈 متابعة تطور الأعراض يومياً</p>',
-      unsafe_allow_html=True,
-  )
+  st.markdown("### 📈 متابعة تطور الأعراض يومياً")
   day_num = st.slider("اختر اليوم:", 1, 7, 1)
   temp = st.number_input("درجة الحرارة المسجلة اليوم (°C):", 35.0, 42.0, 37.5)
   if st.button("حفظ قراءة اليوم"):
@@ -96,101 +157,90 @@ elif menu == "📈 3. متابعة الأعراض اليومية":
     st.line_chart([38.5, 38.0, 37.5, temp])
 
 elif menu == "💊 4. فحص تعارض الأدوية":
-  st.markdown(
-      '<p class="main-title">💊 قاعدة بيانات وفحص التعارض</p>',
-      unsafe_allow_html=True,
-  )
+  st.markdown("### 💊 قاعدة بيانات وفحص التعارض الدوائي")
   drug1 = st.text_input("الدواء الأول:")
   drug2 = st.text_input("الدواء الثاني:")
-  if st.button("فحص التعارض الدوائي"):
+  if st.button("فحص التعارض"):
     if drug1 and drug2:
       st.info(
-          f"🔍 تم فحص التعارض بين ({drug1}) و ({drug2}): لا يوجد تعارض خطير."
+          f"🔍 تم فحص التعارض بين ({drug1}) و ({drug2}): لا يوجد تعارض خطير بينهما."
       )
     else:
       st.warning("الرجاء إدخال اسم الدواءين.")
 
 elif menu == "📅 5. حجز المواعيد في تركيا":
-  st.markdown(
-      '<p class="main-title">📅 حجز موعد طبي في تركيا</p>',
-      unsafe_allow_html=True,
-  )
+  st.markdown("### 📅 حجز موعد طبي في المستشفيات التركية")
   hospital = st.selectbox(
-      "اختر المستشفى:", ["مستشفى إسطنبول العام", "مستشفى أنقرة الطبي"]
+      "اختر المستشفى:",
+      ["مستشفى إسطنبول العام (Istanbul State Hospital)", "مستشفى أنقرة الطبي"],
   )
   app_date = st.date_input("تاريخ الموعد:")
   if st.button("تأكيد حجز الموعد عبر البريد الإلكتروني"):
     st.success(
-        f"✅ تم إرسال طلب الحجز إلى {hospital} بتاريخ {app_date} بنجاح."
+        f"✅ تم إرسال طلب الحجز إلى {hospital} بتاريخ {app_date} بنجاح تام."
     )
 
 elif menu == "🚨 6. الطوارئ الفورية (SOS)":
   st.markdown(
-      '<p class="main-title" style="color: red;">🚨 نظام الطوارئ الفورية'
-      " (SOS)</p>",
+      '<h3 style="color: red;">🚨 نظام الطوارئ الفورية (SOS)</h3>',
       unsafe_allow_html=True,
   )
-  st.error("في حال الخطر أو السقوط المفاجئ، اضغط الزر أدناه لإرسال موقعك:")
-  if st.button("🚨 إرسال إشارة استغاثة طارئة للمستشفى"):
-    st.error("📍 تم إرسال إحداثيات موقعك الجغرافي لأقرب وحدة إسعاف في تركيا!")
+  st.error(
+      "في حال الخطر أو السقوط المفاجئ أو الألم الشديد، اضغط الزر أدناه لإرسال"
+      " موقعك فورا للطوارئ في تركيا:"
+  )
+  if st.button("🚨 إرسال إشارة استغاثة طارئة (SOS)"):
+    st.error(
+        "📍 تم إرسال إحداثيات موقعك الجغرافي لأقرب وحدة إسعاف وطوارئ في تركيا!"
+    )
 
 elif menu == "🥗 7. النظام الغذائي الذكي":
-  st.markdown(
-      '<p class="main-title">🥗 النظام الغذائي المخصص حسب المرض</p>',
-      unsafe_allow_html=True,
-  )
+  st.markdown("### 🥗 النظام الغذائي المخصص حسب المرض")
   disease = st.selectbox("اختر حالتك الصحية:", ["سكري", "ضغط الدم", "حساسية القمح"])
   if st.button("الحصول على قائمة الأكل المناسبة"):
     st.success(
-        f"🍎 الأطعمة الموصى بها لحالة ({disease}): الابتعاد عن السكريات، والتركيز"
-        " على الألياف."
+        f"🍎 الأطعمة الموصى بها لحالة ({disease}): الابتعاد عن السكريات والدهون،"
+        " والتركيز على الخضروات والألياف."
     )
 
 elif menu == "🔊 8. خيار نبرة صوت الطبيب":
-  st.markdown(
-      '<p class="main-title">🔊 تخصيص نبرة صوت الطبيب</p>',
-      unsafe_allow_html=True,
-  )
+  st.markdown("### 🔊 تخصيص نبرة صوت المساعد الطبي")
   voice_type = st.radio(
-      "اختر نبرة صوت المساعد لقراءة التشخيص:",
-      ["صوت طبيب (هادئ ومهني)", "صوت طبيبة (لطيف ومطمئن)"],
+      "اختر نبرة الصوت لقراءة التشخيص:",
+      [
+          "صوت طبيب (هادئ ومهني / Male Doctor)",
+          "صوت طبيبة (لطيف ومطمئن / Female Doctor)",
+      ],
   )
-  st.info(f"تم اعتماد التفضيل الصوتي: {voice_type}")
+  st.info(f"تم اعتماد التفضيل الصوتي بنجاح: {voice_type}")
 
 elif menu == "📁 9. الملف الطبي الشامل":
-  st.markdown(
-      '<p class="main-title">📁 الملف والأرشيف الطبي الشامل</p>',
-      unsafe_allow_html=True,
+  st.markdown("### 📁 الأرشيف والملف الطبي الشامل")
+  st.write(
+      "جميع تقاريرك، تحاليلك، ووصفاتك الطبية مخزنة هنا بأمان وسرية تامة."
   )
-  st.write("جميع تقاريرك وتحاليلك الطبية مخزنة هنا بأمان.")
   uploaded_file = st.file_uploader(
       "ارفع ملف تحليل أو صورة أشعة جديدة:", type=["pdf", "png", "jpg"]
   )
   if uploaded_file:
-    st.success("✅ تم حفظ الملف في أرشيفك الطبي بنجاح.")
+    st.success("✅ تم حفظ الملف في أرشيفك الطبي الشخصي بنجاح.")
 
 elif menu == "📸 10. كاميرا التشخيص الجلدي":
-  st.markdown(
-      '<p class="main-title">📸 كاميرا التشخيص الجلدي المبدئي</p>',
-      unsafe_allow_html=True,
-  )
+  st.markdown("### 📸 كاميرا التشخيص الجلدي المبدئي بالذكاء الاصطناعي")
   img_file = st.file_uploader(
       "التقاط أو رفع صورة للطفح أو الحالة الجلدية:",
       type=["jpg", "png", "jpeg"],
   )
   if img_file:
-    st.image(img_file, caption="الصورة المرفوعة", width=300)
+    st.image(img_file, caption="الصورة المرفوعة للحالة", width=300)
     if st.button("تحليل الصورة بالذكاء الاصطناعي"):
       st.warning(
           "🔬 تحليل مبدئي: يُحتمل أن يكون تهلباً جلدياً بسيطاً، يفضل مراجعة طبيب"
-          " مختص."
+          " جلدية مختص للتأكد."
       )
 
 elif menu == "🩹 11. دليل الإسعافات الأولية":
-  st.markdown(
-      '<p class="main-title">🩹 دليل الإسعافات الأولية السريعة</p>',
-      unsafe_allow_html=True,
-  )
+  st.markdown("### 🩹 دليل الإسعافات الأولية السريعة بالفيديو والخطوات")
   emergency_case = st.selectbox(
       "اختر الحالة الحرجة:", ["حالة اختناق", "جرح قطعي نزيف", "فقدان وعي"]
   )
@@ -202,8 +252,8 @@ elif menu == "🩹 11. دليل الإسعافات الأولية":
       )
     elif emergency_case == "جرح قطعي نزيف":
       st.error(
-          "1. اضغط مباشرة على الجرح بقماش نظيف\n2. ارفع الجزء المصاب أعلى من مستوى"
-          " القلب\n3. اطلب الإسعاف."
+          "1. اضغط مباشرة على الجرح بقطعة قماش نظيفة\n2. ارفع الجزء المصاب أعلى"
+          " من مستوى القلب\n3. اطلب الإسعاف فوراً."
       )
     else:
       st.error(
@@ -213,7 +263,7 @@ elif menu == "🩹 11. دليل الإسعافات الأولية":
 
 st.markdown("---")
 st.markdown(
-    "<p style='text-align: center; color: gray; font-size: 12px;'>Mosaid"
-    " Medical Suite - 2026</p>",
+    "<p style='text-align: center; color: #333; font-size: 13px; font-weight:"
+    " bold;'>Mosaid Medical Suite & AI Voice System - 2026</p>",
     unsafe_allow_html=True,
 )

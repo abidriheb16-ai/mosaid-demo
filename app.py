@@ -3,6 +3,7 @@ import streamlit as st
 import google.generativeai as genai
 from gtts import gTTS
 import io
+import speech_recognition as sr
 from streamlit_mic_recorder import mic_recorder
 
 # --- إعدادات الصفحة ---
@@ -12,50 +13,44 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- القائمة الجانبية (إخصاص الواجهة واللغات) ---
+# --- القائمة الجانبية ---
 st.sidebar.markdown("## ⚙️ إعدادات منظومة موساعد")
 user_role = st.sidebar.selectbox(
-    "اختر صفة المستخدم / Kullanıcı Rolü:", 
+    "اختر صفة المستخدم:", 
     ["مريض (Patient)", "طبيب (Doctor)"]
 )
 
 app_lang = st.sidebar.selectbox(
-    "لغة التحدث / Dil Seçimi / Language:", 
-    ["العربية (Arabic)", "التركية (Türkçe)", "الإنجليزية (English)"]
+    "لغة التحدث:", 
+    ["العربية", "التركية (Türkçe)", "الإنجليزية (English)"]
 )
 
-# تحديد رموز اللغات لنظام الصوت والذكاء الاصطناعي
+# تحديد إعدادات اللغة بناءً على الاختيار
 if "Türkçe" in app_lang:
     lang_code = 'tr'
-    lang_name = 'التركية (Turkish)'
-    welcome_msg = "Merhaba! Ben 'Mosaid' sağlık asistanınızım. Size nasıl yardımcı olabilirim?"
-    mic_title = "🎙️ Sesli Konuşma"
-    mic_btn = "Konuşmak için basın (اضغط للتحدث)"
-    input_placeholder = "Buraya tıbbi sorunuzu yazın..."
-    loading_msg = "Tıbbi analiz yapılıyor..."
+    lang_name = 'التركية'
+    welcome_msg = "Merhaba! Ben 'Mosaid' sağlık asistanınızım. Tıbbi sorunuzu sesli olarak sorabilirsiniz."
+    mic_btn = "🎤 Ses kaydetmek için buraya basın"
+    stop_btn = "⏹️ Kaydı Durdur"
 elif "English" in app_lang:
     lang_code = 'en'
-    lang_name = 'الإنجليزية (English)'
-    welcome_msg = "Hello! I am 'Mosaid', your medical assistant. How can I help you today?"
-    mic_title = "🎙️ Voice Interaction"
-    mic_btn = "Click to speak (اضغط للتحدث)"
-    input_placeholder = "Type your medical question here..."
-    loading_msg = "Processing medical consultation..."
+    lang_name = 'الإنجليزية'
+    welcome_msg = "Hello! I am 'Mosaid', your medical assistant. You can ask your medical questions by voice."
+    mic_btn = "🎤 Click here to record audio"
+    stop_btn = "⏹️ Stop Recording"
 else:
     lang_code = 'ar'
-    lang_name = 'العربية (Arabic)'
-    welcome_msg = "أهلاً بك! أنا مساعدك الطبي 'موساعد'. كيف يمكنني مساعدتك اليوم؟"
-    mic_title = "🎙️ المحادثة الصوتية المباشرة"
-    mic_btn = "اضغط للتحدث (ابدأ الكلام)"
-    input_placeholder = "اكتب سؤالك أو استشارتك الطبية هنا..."
-    loading_msg = "جاري معالجة الاستشارة الطبية بدقة..."
+    lang_name = 'العربية'
+    welcome_msg = "أهلاً بك! أنا مساعدك الطبي 'موساعد'. يمكنك طرح سؤالك الطبي صوتياً وسأجيبك."
+    mic_btn = "🎤 اضغط هنا لتسجيل صوتك"
+    stop_btn = "⏹️ إيقاف التسجيل"
 
 # --- العنوان الرئيسي ---
 st.markdown(f"## 🩺 موساعد الطبي - Mosaid AI ({user_role})")
-st.write(f"المنظومة الذكية الموجهة لخدمة المرضى والأطباء بتركيا (اللغة: {lang_name})")
+st.write(f"المنظومة الذكية للتفاعل الصوتي. (اللغة: {lang_name})")
 st.write("---")
 
-# --- إعداد مفتاح Gemini API ---
+# --- إعداد مفتاح API ---
 try:
     if "GEMINI_API_KEY" in st.secrets:
         api_key = st.secrets["GEMINI_API_KEY"]
@@ -66,17 +61,16 @@ try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("gemini-1.5-flash")
     else:
-        st.error("⚠️ يرجى ضبط مفتاح GEMINI_API_KEY في إعدادات Secrets الخاصة بـ Streamlit.")
+        st.error("⚠️ يرجى ضبط مفتاح API.")
         model = None
 except Exception as e:
     st.error(f"خطأ في الاتصال بالمفتاح: {e}")
     model = None
 
-# --- إدارة الذاكرة للمحادثة ---
+# --- الذاكرة ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# إذا كانت القائمة فارغة أو تغيرت اللغات، نضيف رسالة الترحيب المناسبة
 if not st.session_state.messages:
     st.session_state.messages.append({"role": "assistant", "content": welcome_msg})
 
@@ -84,7 +78,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# --- وظيفة تحويل النص إلى صوت (TTS محسنة) ---
+# --- وظيفة نطق الرد (TTS) ---
 def speak_text(text, code):
     try:
         tts = gTTS(text=text, lang=code, slow=False)
@@ -95,27 +89,55 @@ def speak_text(text, code):
     except Exception as e:
         st.error(f"تعذر تشغيل الصوت: {e}")
 
-# --- الميكروفون والتسجيل الصوتي المباشر ---
-st.markdown(f"### {mic_title}")
-audio_data = mic_recorder(start_prompt=mic_btn, stop_prompt="إيقاف التسجيل / Durdur", key='mic')
+# --- وظيفة تحويل الصوت المسجل إلى نص (STT) ---
+def recognize_speech(audio_bytes, lang):
+    r = sr.Recognizer()
+    audio_file = io.BytesIO(audio_bytes)
+    
+    # تحديد كود اللغة للتعرف على الصوت
+    recog_lang = 'ar-SA'
+    if lang == 'tr':
+        recog_lang = 'tr-TR'
+    elif lang == 'en':
+        recog_lang = 'en-US'
+
+    try:
+        with sr.AudioFile(audio_file) as source:
+            audio_data = r.record(source)
+            text = r.recognize_google(audio_data, language=recog_lang)
+            return text
+    except sr.UnknownValueError:
+        return "⚠️ عذراً، لم أتمكن من فهم الصوت بوضوح. يرجى إعادة المحاولة."
+    except Exception as e:
+        return f"⚠️ خطأ في معالجة الصوت: {e}"
+
+# --- واجهة تسجيل الصوت للمستخدم ---
+st.markdown("### 🎙️ تحدث معي:")
+audio_data = mic_recorder(
+    start_prompt=mic_btn,
+    stop_prompt=stop_btn,
+    key='mic'
+)
 
 user_query = None
 
+# إذا قام المستخدم بالتسجيل
 if audio_data:
-    if lang_code == 'tr':
-        user_query = "Merhaba, sesli olarak soru sordum, lütfen tıbbi olarak değerlendir."
-    elif lang_code == 'en':
-        user_query = "Hello, I spoke via voice, please provide a medical evaluation."
+    st.info("🔄 جاري معالجة صوتك...")
+    # تحويل صوت المستخدم إلى نص
+    transcribed_text = recognize_speech(audio_data['bytes'], lang_code)
+    
+    if "⚠️" not in transcribed_text:
+        user_query = transcribed_text
     else:
-        user_query = "مرحباً، لقد تحدثت إليك صوتياً، أرجو إفادتي طبياً."
-    st.info("🎤 تم التقاط الصوت بنجاح وتحويله للمعالجة!")
+        st.warning(transcribed_text)
 
-# الخيار اليدوي للكتابة
-text_input = st.chat_input(input_placeholder)
+# خيار الكتابة الاحتياطي
+text_input = st.chat_input("أو يمكنك الكتابة هنا إذا أردت...")
 if text_input:
     user_query = text_input
 
-# --- معالجة السؤال والرد بالذكاء الاصطناعي ---
+# --- معالجة السؤال والرد ---
 if user_query:
     st.session_state.messages.append({"role": "user", "content": user_query})
     with st.chat_message("user"):
@@ -123,12 +145,13 @@ if user_query:
 
     with st.chat_message("assistant"):
         if model:
-            with st.spinner(loading_msg):
+            with st.spinner("جاري التفكير..."):
                 try:
                     system_prompt = f"""
-                    أنت مساعد طبي ذكي ومهني تدعى 'موساعد' (Mosaid)، موجه لتقديم خدمات لـ {user_role} في تركيا.
-                    قم بالرد حصراً باللغة المطلوبة: {lang_name}.
-                    قدم استشارات وتشخيصات مبدئية دقيقة، احترافية، وبطريقة وودودة.
+                    أنت مساعد طبي ذكي ومهني تدعى 'موساعد'.
+                    المستخدم يتواصل معك بصفة: {user_role}.
+                    لغة التواصل المطلوبة: {lang_name}.
+                    أجب بطريقة مبسطة وواضحة جداً لأن الرد سيتم قراءته صوتياً للمستخدم (الذي قد يكون أمياً أو لا يقرأ).
                     """
                     
                     response = model.generate_content(f"{system_prompt}\n\nالسؤال: {user_query}")
@@ -137,11 +160,9 @@ if user_query:
                     st.markdown(reply_text)
                     st.session_state.messages.append({"role": "assistant", "content": reply_text})
                     
-                    # تشغيل الرد صوتياً باللغة المحددة
+                    # نطق الرد صوتياً
                     speak_text(reply_text, lang_code)
                     
                 except Exception as e:
-                    st.error(f"حدث خطأ أثناء المعالجة: {e}")
-        else:
-            st.error("الرجاء التأكد من مفتاح API.")
+                    st.error(f"حدث خطأ: {e}")
     

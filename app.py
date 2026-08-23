@@ -1,48 +1,55 @@
 import streamlit as st
-from streamlit_mic_recorder import mic_recorder
 import speech_recognition as sr
 from gtts import gTTS
-import io
-import base64
+import os
 
-st.set_page_config(page_title="موساعد الذكي", page_icon="🎤")
-st.title("🎤 موساعد - المساعد الذكي")
-st.write("اضغطي على الميكرو واهدري، ونسمعك ونرد عليك")
+st.set_page_config(page_title="موساعد", layout="centered")
+st.title("🎤 موساعد - ترجمة صوتية")
+st.write("اختاري اللغات وتكلمي")
 
-lang = st.selectbox(
-    "اختر اللغة / Choose Language / Choisissez la langue",
-    ("العربية", "English", "Français")
-)
-lang_code = {"العربية": "ar", "English": "en", "Français": "fr"}
+col1, col2 = st.columns(2)
+with col1:
+    lang_in = st.selectbox("من:", ["ar", "en", "fr", "tr"], format_func=lambda x: {"ar":"العربية","en":"English","fr":"Français","tr":"Türkçe"}[x])
+with col2:
+    lang_out = st.selectbox("إلى:", ["ar", "en", "fr", "tr"], format_func=lambda x: {"ar":"العربية","en":"English","fr":"Français","tr":"Türkçe"}[x])
 
-audio = mic_recorder(start_prompt="🎤 اضغطي واهدري", stop_prompt="⏹️ وقف", key="recorder")
-
-if audio:
-    st.audio(audio['bytes'])
+if st.button("🎙️ اضغطي وتكلمي"):
     r = sr.Recognizer()
-    with sr.AudioFile(io.BytesIO(audio['bytes'])) as source:
-        audio_data = r.record(source)
+    with sr.Microphone() as source:
+        st.info("اسمع فيك... تكلمي")
+        audio = r.listen(source)
     try:
-        if lang == "العربية":
-            text = r.recognize_google(audio_data, language="ar-DZ")
-        elif lang == "English":
-            text = r.recognize_google(audio_data, language="en-US")
-        else:
-            text = r.recognize_google(audio_data, language="fr-FR")
-        st.success(f"سمعتك: {text}")
-        if lang == "العربية":
-            response = f"فهمتك قلتي: {text}. كيف نقدر نعاونك؟"
-        elif lang == "English":
-            response = f"I heard you say: {text}. How can I help you?"
-        else:
-            response = f"J'ai entendu: {text}. Comment puis-je vous aider?"
-        st.write("**الرد:**", response)
-        tts = gTTS(response, lang=lang_code[lang])
-        mp3_fp = io.BytesIO()
-        tts.write_to_fp(mp3_fp)
-        mp3_fp.seek(0)
-        b64 = base64.b64encode(mp3_fp.read()).decode()
-        audio_html = f'<audio autoplay src="data:audio/mp3;base64,{b64}"></audio>'
-        st.markdown(audio_html, unsafe_allow_html=True)
+        text = r.recognize_google(audio, language=lang_in)
+        st.success(f"انتِ قلتي: {text}")
+        tts = gTTS(text, lang=lang_out)
+        tts.save("reply.mp3")
+        st.audio("reply.mp3")
     except:
-        st.error("ما فهمتش مليح، عاودي من فضلك")
+        st.error("ما فهمتش. عاودي")import streamlit as st
+import speech_recognition as sr
+from gtts import gTTS
+import os
+
+st.set_page_config(page_title="موساعد", layout="centered")
+st.title("🎤 موساعد - ترجمة صوتية")
+st.write("اختاري اللغات وتكلمي")
+
+col1, col2 = st.columns(2)
+with col1:
+    lang_in = st.selectbox("من:", ["ar", "en", "fr", "tr"], format_func=lambda x: {"ar":"العربية","en":"English","fr":"Français","tr":"Türkçe"}[x])
+with col2:
+    lang_out = st.selectbox("إلى:", ["ar", "en", "fr", "tr"], format_func=lambda x: {"ar":"العربية","en":"English","fr":"Français","tr":"Türkçe"}[x])
+
+if st.button("🎙️ اضغطي وتكلمي"):
+    r = sr.Recognizer()
+    with sr.Microphone() as source:
+        st.info("اسمع فيك... تكلمي")
+        audio = r.listen(source)
+    try:
+        text = r.recognize_google(audio, language=lang_in)
+        st.success(f"انتِ قلتي: {text}")
+        tts = gTTS(text, lang=lang_out)
+        tts.save("reply.mp3")
+        st.audio("reply.mp3")
+    except:
+        st.error("ما فهمتش. عاودي")

@@ -27,3 +27,14 @@ audio = mic_recorder(
 
 if audio:
     st.audio(audio['bytes'])
+
+    # تحويل الصوت لنص
+    r = sr.Recognizer()
+    with sr.AudioFile(io.BytesIO(audio['bytes'])) as source:
+        audio_data = r.record(source)
+
+    try:
+        if lang == "العربية":
+            text = r.recognize_google(audio_data, language="ar-DZ")
+        elif lang == "English":
+            text = r.recognize_google(audio_data

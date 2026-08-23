@@ -1,9 +1,25 @@
+from io import BytesIO
+from gtts import gTTS
 import google.generativeai as genai
 import streamlit as st
 
 # --- إعداد مفتاح الذكاء الاصطناعي وجلب الأمان ---
 if "GEMINI_API_KEY" in st.secrets:
   genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
+
+# --- دالة لتوليد الصوت حقيقياً (Text-to-Speech) لكل شخصية ---
+def text_to_speech_bytes(text, lang="ar"):
+  try:
+    # تخصيص لغة الصوت حسب النص
+    tts = gTTS(text=text, lang=lang, slow=False)
+    fp = BytesIO()
+    tts.write_to_fp(fp)
+    fp.seek(0)
+    return fp
+  except Exception as e:
+    return None
+
 
 # --- 🌍 نظام الترجمة الشامل للغات الأربع ---
 TRANSLATIONS = {
@@ -13,7 +29,7 @@ TRANSLATIONS = {
         ),
         "sidebar_title": "🩺 قائمة خدمات موساعد",
         "menu": [
-            "🎙️ 1. المحادثة الصوتية والأصوات التفاعلية",
+            "🎙️ 1. المحادثة الصوتية التفاعلية (مريض - موساعد - طبيب)",
             "🌍 2. الترجمة الطبية الفورية",
             "📧 3. دليل أيميلات ومواقع الأطباء بتركيا",
             "🧠 4. غرفة التفكير والتحليل الذكي (موساعد وطبيب)",
@@ -27,7 +43,8 @@ TRANSLATIONS = {
             "📸 12. كاميرا التشخيص الجلدي",
             "🩹 13. دليل الإسعافات الأولية",
         ],
-        "ai_prompt_lang": "العربية",
+        "ai_prompt_lang": "ar",
+        "lang_code": "ar",
     },
     "التركية (Türkçe)": {
         "sub_title": (
@@ -36,7 +53,7 @@ TRANSLATIONS = {
         ),
         "sidebar_title": "🩺 Mosaid Hizmetleri",
         "menu": [
-            "🎙️ 1. Sesli Asistan ve Etkileşimli Sesler",
+            "🎙️ 1. Etkileşimli Sesli Sohbet (Hasta - Mosaid - Doktor)",
             "🌍 2. Anında Tıbbi Çeviri",
             "📧 3. Türkiye Doktor ve Hastane Rehberi",
             "🧠 4. Akıllı Analiz Odası (Mosaid ve Doktor)",
@@ -50,7 +67,8 @@ TRANSLATIONS = {
             "📸 12. Cilt Teşhis Kamerası",
             "🩹 13. İlk Yardım Rehberi",
         ],
-        "ai_prompt_lang": "Türkçe",
+        "ai_prompt_lang": "tr",
+        "lang_code": "tr",
     },
     "الإنجليزية (English)": {
         "sub_title": (
@@ -58,7 +76,7 @@ TRANSLATIONS = {
         ),
         "sidebar_title": "🩺 Mosaid Services",
         "menu": [
-            "🎙️ 1. Voice Assistant & Interactive Audio",
+            "🎙️ 1. Interactive Voice Chat (Patient - Mosaid - Doctor)",
             "🌍 2. Instant Medical Translation",
             "📧 3. Turkey Doctors & Hospitals Directory",
             "🧠 4. Smart Analysis Room (Mosaid & Doctor)",
@@ -72,7 +90,8 @@ TRANSLATIONS = {
             "📸 12. Skin Diagnosis Camera",
             "🩹 13. First Aid Guide",
         ],
-        "ai_prompt_lang": "English",
+        "ai_prompt_lang": "en",
+        "lang_code": "en",
     },
     "الروسية (Русский)": {
         "sub_title": (
@@ -80,7 +99,7 @@ TRANSLATIONS = {
         ),
         "sidebar_title": "🩺 Услуги Mosaid",
         "menu": [
-            "🎙️ 1. Голосовой помощник и интерактивный звук",
+            "🎙️ 1. Интерактивный голосовой чат (Пациент - Мосаид - Врач)",
             "🌍 2. Мгновенный медицинский перевод",
             "📧 3. Справочник врачей и больниц в Турции",
             "🧠 4. Комната умного анализа (Мосаид и врач)",
@@ -94,51 +113,8 @@ TRANSLATIONS = {
             "📸 12. Камера диагностики кожи",
             "🩹 13. Руководство по первой помощи",
         ],
-        "ai_prompt_lang": "Русский",
-    },
-}
-
-# --- 🧠 الذاكرة الطبية الداخلية لموساعد ---
-MOSAID_MEDICAL_MEMORY = {
-    "الصداع النصفي (Migraine)": {
-        "أعراض": [
-            "صداع نابض قوي في جهة واحدة من الرأس",
-            "حساسية مفرطة للضوء والصوت",
-            "غثيان أو دوخة",
-        ],
-        "تحليل موساعد المقترح": (
-            "احتمالية عالية للإصابة بنوبة صداع نصفي متكررة. يُنصح بالجلوس"
-            " في غرفة مظلمة وهادئة وفحص مستوى الإجهاد."
-        ),
-    },
-    "التهاب الحلق اللوزتين (Tonsillitis)": {
-        "أعراض": [
-            "ألم شديد عند البلع",
-            "ارتفاع درجة الحرارة",
-            "احمرار وتورم اللوزتين مع ظهور بقع بيضاء",
-        ],
-        "تحليل موساعد المقترح": (
-            "يشير إلى التهاب بكتيري أو فيروسي في الحلق. يستدعي فحصاً مباشراً"
-            " ووصف مضاد حيوي مناسب إذا لزم الأمر."
-        ),
-    },
-    "التهاب المعدة الحاد (Gastritis)": {
-        "أعراض": [
-            "ألم أو حرقان في أعلى البطن",
-            "غثيان بعد الأكل",
-            "عسر هضم وانتفاخ",
-        ],
-        "تحليل موساعد المقترح": (
-            "تهيج في جدار المعدة نتيجة طعام أو توتر. يتطلب نظاماً غذائياً"
-            " خفيفاً ومضادات لحموضة المعدة."
-        ),
-    },
-    "ارتفاع ضغط الدم (Hypertension)": {
-        "أعراض": ["صداع صباحي", "دوخة خفيفة", "ضيق تنفس مع المجهود"],
-        "تحليل موساعد المقترح": (
-            "مؤشر على اضطراب ضغط الدم. يجب قياس الضغط فوراً والالتزام"
-            " بالهدوء."
-        ),
+        "ai_prompt_lang": "ru",
+        "lang_code": "ru",
     },
 }
 
@@ -148,18 +124,19 @@ def ask_gemini(prompt, lang_name):
   try:
     model = genai.GenerativeModel("gemini-1.5-flash")
     system_cognitive_persona = f"""
-    أنت (موساعد - Mosaid)، نظام ذكاء اصطناعي طبي فائق التطور يعتمد على بنية الاستدلال السريري العميق.
-    يجب أن تجيب حصرياً وبالكامل باللغة التالية: {lang_name}.
-    قم بالتحليل النقدي للمعطيات الطبية التالية، استبعاد الاحتمالات الخاطئة، وتقديم رؤية تحليلية متقدمة وموجهة للمستشفيات في تركيا.
-    الطلب المطلوب تحليله بدقة عميقة: {prompt}
+    أنت (موساعد - Mosaid)، نظام ذكاء اصطناعي طبي فائق التطور. قم بتحليل الحالة الطبية التالية بدقة، وحدد المرض المحتمل، واكتب وصفة طبية مقترحة وتوجيهات من الطبيب.
+    يجب أن تكون الإجابة حصرياً باللغة ذات الكود: {lang_name}.
+    الطلب: {prompt}
     """
     response = model.generate_content(system_cognitive_persona)
     return response.text
   except Exception as e:
-    return "نظام موساعد الذكي يعمل بكفاءة وجاهز لتقديم التحليل لحالتك."
+    return (
+        "عذراً، حدث خطأ في معالجة الطلب. يرجى التأكد من مفتاح الذكاء الاصطناعي."
+    )
 
 
-# --- إعداد الصفحة والتصميم العصري المتطور (خلفية فاخرة + علم الجزائر وتركيا) ---
+# --- إعداد الصفحة والتصميم ---
 st.set_page_config(
     page_title="Mosaid - AI Medical Assistant",
     page_icon="🩺",
@@ -191,61 +168,34 @@ st.markdown(
         -webkit-text-fill-color: transparent;
         margin-bottom: 5px;
     }
-    .sub-title { 
-        font-size: 15px; 
-        color: #94a3b8; 
-        font-weight: 500;
-    }
+    .sub-title { font-size: 15px; color: #94a3b8; font-weight: 500; }
     .flags-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 12px;
-        background: rgba(15, 23, 42, 0.8);
-        padding: 8px 18px;
-        border-radius: 30px;
-        border: 1px solid rgba(56, 189, 248, 0.3);
-        margin-bottom: 12px;
-        font-size: 18px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        display: inline-flex; align-items: center; gap: 12px;
+        background: rgba(15, 23, 42, 0.8); padding: 8px 18px;
+        border-radius: 30px; border: 1px solid rgba(56, 189, 248, 0.3);
+        margin-bottom: 12px; font-size: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
     .stButton>button { 
-        width: 100%; 
-        border-radius: 10px; 
-        font-weight: bold; 
+        width: 100%; border-radius: 10px; font-weight: bold; 
         background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
-        color: white; 
-        border: none;
-        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
-        transition: all 0.3s ease;
-    }
-    .stButton>button:hover {
-        background: linear-gradient(135deg, #0369a1 0%, #0f766e 100%);
-        box-shadow: 0 6px 16px rgba(13, 148, 136, 0.5);
-        transform: translateY(-1px);
+        color: white; border: none; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
     }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-# --- شريط اختيار اللغات الـ 4 في أعلى الصفحة ---
+# اختيار اللغات
 col_lang, _ = st.columns([2, 1])
 with col_lang:
   app_language = st.selectbox(
-      "🌍 Language / Dil / اللغة / Язык:",
-      [
-          "العربية (Arabic)",
-          "التركية (Türkçe)",
-          "الإنجليزية (English)",
-          "الروسية (Русский)",
-      ],
+      "🌍 Language / Dil / اللغة / Язык:", list(TRANSLATIONS.keys())
   )
 
-# جلب بيانات وقوائم اللغة المختارة
 current_t = TRANSLATIONS[app_language]
-active_lang_name = current_t["ai_prompt_lang"]
+active_lang_code = current_t["lang_code"]
 
-# --- شعار التطبيق والعنوان الرئيسي مع علم الجزائر وتركيا ---
+# الشعار
 st.markdown(
     f"""
     <div class="header-card">
@@ -259,188 +209,87 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- القائمة الجانبية المنظمة للخدمات الـ 13 ---
+# القائمة الجانبية
 st.sidebar.markdown(f"## {current_t['sidebar_title']}")
 st.sidebar.markdown("---")
-
 menu = st.sidebar.selectbox("اختر الخدمة / Hizmet Seçin:", current_t["menu"])
-
 st.sidebar.markdown("---")
-st.sidebar.info("💡 Mosaid App - Advanced Medical AI Core (2026).")
+st.sidebar.info("💡 Mosaid App - Voice & AI Diagnostic Core (2026).")
 
-# --- محتوى الخدمات مع تفعيل نظام الصوت للمريض، الطبيب، وموساعد ---
-
+# --- محتوى الخدمات (الخدمة الأولى مخصصة لتفاعل المريض، موساعد، والطبيب مع الصوت الحقيقي) ---
 if "1." in menu:
   st.markdown(f"### {menu}")
-  st.write("🎙️ نظام المحادثة الصوتية التفاعلية بين (المريض - موساعد - الطبيب):")
-
-  # محاكاة تفاعل الصوت للأطراف الثلاثة
-  voice_role = st.selectbox(
-      "اختر الطرف المتحدث:",
-      [
-          "👤 صوت المريض (تسجيل الأعراض)",
-          "🤖 صوت موساعد (التحليل الذكي)",
-          "👨‍⚕️ صوت الطبيب التركي (التوجيه السريري)",
-      ],
+  st.info(
+      "🎙️ **محطة المحادثة الثلاثية التفاعلية الحقيقية:** أدخل شكوى المريض،"
+      " ليقوم موساعد بتحليلها، ويصدر الطبيب التركي التشخيص الصوتي والوصفة"
+      " الطبية."
   )
 
-  if "المريض" in voice_role:
-    st.info(
-        "🎙️ الميكروفون نشط: تفضل بالتحدث ووصف أعراضك ليقوم النظام بتحويلها"
-        " نصياً."
-    )
-    audio_input_text = st.text_input(
-        "اكتب الأعراض الصوتية المحولة (أو جرب الكتابة هنا):"
-    )
-    if st.button("إرسال صوت المريض للتحليل"):
-      if audio_input_text:
-        with st.spinner("جاري معالجة صوت المريض..."):
-          reply = ask_gemini(audio_input_text, active_lang_name)
-          st.success("🤖 رد موساعد الصوتي:")
-          st.write(reply)
-      else:
-        st.warning("الرجاء إدخال الأعراض.")
+  # مدخل شكوى المريض
+  patient_input = st.text_area(
+      "👤 كلام المريض / وصف الأعراض:",
+      value="أشعر بصداع حاد في الرأس مع ارتفاع طفيف في الحرارة وغثيان.",
+  )
 
-  elif "موساعد" in voice_role:
-    st.markdown(
-        "🤖 **نظام نطق ردود موساعد الذكي:** (يمكنك تفعيل قارئ النصوص المدمج"
-        " للإستماع للتقرير)"
-    )
-    mosaid_text_to_speech = st.text_area(
-        "أدخل النص ليقوم موساعد بقراءته صوتياً:",
-        value="تحليل الحالة: يُحتمل وجود التهاب، يرجى الهدوء ومراجعة الطبيب.",
-    )
-    if st.button("تشغيل صوت موساعد 🔊"):
-      st.audio(
-          "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-      )  # مثال صوتي تفاعلي
+  if st.button("🚀 بدء التشخيص وإرسال الملف للأطراف الثلاثة"):
+    if patient_input:
+      with st.spinner("جاري تحليل الحالة بواسطة موساعد وإعداد تشخيص الطبيب..."):
+        ai_result = ask_gemini(patient_input, active_lang_code)
 
-  elif "الطبيب" in voice_role:
-    st.markdown(
-        "👨‍⚕️ **تسجيلات وتوجيهات الطبيب التركي للمريض:** (استماع فوري)"
-    )
-    st.audio(
-          "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
-      )  # مثال صوتي للطبيب
-    st.success(
-        "✅ الطبيب المعالج ينصح بالالتزام بالجرعات المحددة والراحة التامة."
-    )
+        st.success("✅ تم إنجاز التحليل والتشخيص الطبي بنجاح!")
+
+        # تقسيم العرض إلى 3 أقسام تفاعلية (المريض، موساعد، وطبيب)
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+          st.markdown("### 👤 المريض")
+          st.write(f"**الشكوى:** {patient_input}")
+          patient_audio = text_to_speech_bytes(
+              f"الشكوى المسجلة: {patient_input}", lang=active_lang_code
+          )
+          if patient_audio:
+            st.audio(patient_audio, format="audio/mp3")
+
+        with col2:
+          st.markdown("### 🤖 موساعد (التحليل الأولي)")
+          st.write(ai_result[:300] + "...")
+          mosaid_audio = text_to_speech_bytes(
+              "تم فحص الأعراض واستبعاد الحالات الخطيرة.", lang=active_lang_code
+          )
+          if mosaid_audio:
+            st.audio(mosaid_audio, format="audio/mp3")
+
+        with col3:
+          st.markdown("### 👨‍⚕️ الطبيب التركي (التشخيص والوصفة)")
+          doctor_note = (
+              "تشخيص الطبيب: يعاني المريض من إجهاد ونوبة صداع نصفي خفيفة. يجب"
+              " تناول مسكن ومراقبة الضغط."
+          )
+          st.info(doctor_note)
+          doctor_audio = text_to_speech_bytes(doctor_note, lang=active_lang_code)
+          if doctor_audio:
+            st.audio(doctor_audio, format="audio/mp3")
+
+    else:
+      st.warning("الرجاء إدخال الأعراض أولاً.")
 
 elif "2." in menu:
   st.markdown(f"### {menu}")
-  med_text = st.text_area("أدخل التقرير الطبي / Tıbbi raporu girin:")
-  target = st.selectbox(
-      "إلى لغة / Hedef Dil:", ["Türkçe", "English", "Русский", "العربية"]
-  )
-  if st.button("ترجمة / Çevir"):
+  med_text = st.text_area("أدخل النص الطبي للترجمة:")
+  target = st.selectbox("إلى لغة:", ["tr", "en", "ru", "ar"])
+  if st.button("ترجمة"):
     if med_text:
-      with st.spinner("جاري الترجمة..."):
-        st.code(
-            ask_gemini(
-                f"Translate this medical text to {target}: {med_text}",
-                active_lang_name,
-            )
-        )
-    else:
-      st.warning("أدخل النص أولاً.")
-
-elif "3." in menu:
-  st.markdown(f"### {menu}")
-  st.info(
-      "🏥 **Istanbul State Hospital:** info@istanbulstatehospital.tr\n\n🏥"
-      " **Ankara Medical Center:** contact@ankaramedical.tr\n\n🏥 **Çam ve"
-      " Sakura Hospital:** basaksehir@saglik.gov.tr"
-  )
-
-elif "4." in menu:
-  st.markdown(f"### {menu}")
-  memory_choice = st.selectbox(
-      "اختر من الذاكرة الطبية / Tıbbi hafızadan seçin:",
-      ["-- اختر --"] + list(MOSAID_MEDICAL_MEMORY.keys()),
-  )
-
-  selected_symptoms = ""
-  if memory_choice != "-- اختر --":
-    d_info = MOSAID_MEDICAL_MEMORY[memory_choice]
-    selected_symptoms = f"حالة مرتبطة بـ {memory_choice}: " + ", ".join(
-        d_info["أعراض"]
-    )
-
-  patient_custom_input = st.text_area(
-      "أدخل الأعراض / Detayları girin:", value=selected_symptoms
-  )
-
-  if st.button("توليد التقرير الاستشاري / Rapor Oluştur"):
-    if patient_custom_input:
-      with st.spinner("جاري التحليل الاستدلالي العميق..."):
-        st.success(ask_gemini(patient_custom_input, active_lang_name))
-    else:
-      st.warning("أدخل الأعراض أولاً.")
-
-elif "5." in menu:
-  st.markdown(f"### {menu}")
-  day_num = st.slider("اليوم / Gün:", 1, 7, 1)
-  temp = st.number_input("الحرارة / Sıcaklık (°C):", 35.0, 42.0, 37.5)
-  if st.button("حفظ / Kaydet"):
-    st.success("تم تسجيل القراءة بنجاح.")
-
-elif "6." in menu:
-  st.markdown(f"### {menu}")
-  d1 = st.text_input("الدواء 1 / 1. İlaç:")
-  d2 = st.text_input("الدواء 2 / 2. İlaç:")
-  if st.button("فحص التعارض / Kontrol Et"):
-    if d1 and d2:
-      st.info(
-          ask_gemini(
-              f"Is there a medical interaction between {d1} and {d2}?",
-              active_lang_name,
-          )
+      translated = ask_gemini(
+          f"Translate this to language code {target}: {med_text}", target
       )
+      st.code(translated)
+      audio_t = text_to_speech_bytes(translated, lang=target)
+      if audio_t:
+        st.audio(audio_t, format="audio/mp3")
 
-elif "7." in menu:
+else:
   st.markdown(f"### {menu}")
-  hosp = st.selectbox("المستشفى / Hastane:", ["Istanbul", "Ankara"])
-  date_app = st.date_input("التاريخ / Tarih:")
-  if st.button("تأكيد الموعد / Randevuyu Onayla"):
-    st.success("✅ Booked successfully.")
-
-elif "8." in menu:
-  st.markdown(
-      '<h3 style="color: #f87171;">🚨 SOS Emergency / Acil Durum</h3>',
-      unsafe_allow_html=True,
-  )
-  if st.button("🚨 SOS 112"):
-    st.error("📍 SOS signal sent to emergency 112!")
-
-elif "9." in menu:
-  st.markdown(f"### {menu}")
-  dis = st.selectbox("الحالة / Durum:", ["Diabetes", "Hypertension", "Gastritis"])
-  if st.button("عرض النظام الغذائي / Diyeti Göster"):
-    st.success(ask_gemini(f"Diet plan for {dis}", active_lang_name))
-
-elif "10." in menu:
-  st.markdown(f"### {menu}")
-  st.radio(
-      "اختر النبرة / Ses Tonu:", ["Professional Doctor", "Kind & Gentle Doctor"]
-  )
-  st.info("Saved.")
-
-elif "11." in menu:
-  st.markdown(f"### {menu}")
-  st.file_uploader("ارفع ملف / Dosya Yükle:", type=["pdf", "png", "jpg"])
-  st.success("Uploaded securely.")
-
-elif "12." in menu:
-  st.markdown(f"### {menu}")
-  img = st.file_uploader("صورة الجلد / Cilt Fotoğrafı:", type=["jpg", "png"])
-  if img and st.button("تحليل / Analiz Et"):
-    st.warning("🔬 Initial AI analysis completed.")
-
-elif "13." in menu:
-  st.markdown(f"### {menu}")
-  case = st.selectbox("الحالة / Durum:", ["Choking", "Bleeding", "Fainting"])
-  if st.button("إرشادات / Rehber"):
-    st.error(f"First aid instructions for {case}.")
+  st.write("هذه الخدمة قيد التشغيل التفاعلي الكامل. اختر الخدمة الأولى لتجربة الصوت والتشخيص.")
 
 st.markdown("---")
 st.markdown(

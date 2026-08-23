@@ -9,7 +9,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# تصميم وتنسيق بصري بلغة CSS لجعل التطبيق يبدو مذهلاً
 st.markdown(
     """
     <style>
@@ -42,7 +41,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# العنوان الرئيسي المحدث
 st.markdown('<p class="main-title">🩺 Mosaid (موساعد)</p>', unsafe_allow_html=True)
 st.markdown(
     '<p class="sub-title">المساعد الذكي العابر للحدود للرعاية الطبية الفورية'
@@ -50,14 +48,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- إعداد مفتاح الذكاء الاصطناعي ---
-# genai.configure(api_key="YOUR_GEMINI_API_KEY")
-
-
-# --- الشريط الجانبي (Sidebar) لاختيار اللغات والإعدادات ---
+# --- الشريط الجانبي لاختيار اللغات ---
 st.sidebar.title("⚙️ الإعدادات واللغات")
-st.sidebar.write("اختر لغة الطبيب أو وجهة المستشفى:")
-
 target_language = st.sidebar.selectbox(
     "لغة التقرير الموجهة للمستشفى:",
     [
@@ -68,64 +60,75 @@ target_language = st.sidebar.selectbox(
     ],
 )
 
-patient_mode = st.sidebar.radio(
-    "وضع الاستخدام:", ["مريض (Patient)", "طبيب (Doctor)"]
-)
 
-
-# --- دالة تحليل نبرة الصوت وتوتر المريض المتقدمة ---
+# --- دالة تحليل نبرة الصوت والمؤشر الطبي ---
 def analyze_patient_vocal_stress(
     symptom_text, transcribed_audio_context, lang
 ):
   prompt = f"""
     You are an advanced medical AI assistant integrated into 'Mosaid'. 
-    Analyze the following patient's input (converted from voice):
-    Patient Input: "{symptom_text}"
+    Analyze the following patient's input and vocal indicators:
+    Patient Input / Speech: "{symptom_text}"
     Audio Tone / Stress Notes: "{transcribed_audio_context}"
     Target Language for output medical report: "{lang}"
     
     Task:
     1. Estimate the patient's stress/pain urgency level (Low, Moderate, High/Critical).
-    2. Provide a professional medical summary in the target language specified above, highlighting potential emotional distress or hidden pain markers.
+    2. Provide a professional medical summary in the target language specified above.
     3. Keep it concise, medical, and professional.
     """
-
   model = genai.GenerativeModel("gemini-1.5-flash")
   response = model.generate_content(prompt)
   return response.text
 
 
-# --- الواجهة الرئيسية للميزة الفائقة ---
+# --- الواجهة الرئيسية للتعامل الصوتي والنصي ---
 st.markdown("---")
-st.markdown(
-    "### 🎙️ محلل المؤشرات الصوتية ونبرة الألم (Vocal Biomarker & Stress"
-    " Analysis)"
-)
+st.markdown("### 🎙️ إدخال الأعراض وصوت المريض (Voice & Symptoms Analysis)")
 st.write(
-    "هذه الميزة تقرأ الأعراض وتحلل نبرة الصوت وحالة التوتر لإنتاج تقرير طبي"
-    " دقيق باللغة المختارة."
+    "بما أنك أشرتِ إلى أن الصوت غير موجود، يمكنكِ هنا إما تسجيل الملاحظات الصوتية"
+    " أو كتابتها مباشرة ليقوم الذكاء الاصطناعي بتحليلها:"
 )
 
-user_input = st.text_area(
-    "اكتب أو الصق ما يشتكي منه المريض:",
-    placeholder="مثلاً: عندي ألم حاد في الصدر ودوخة منذ الصباح...",
-    height=120,
+# خيار إدخال صوتي أو كتابي دقيق
+input_method = st.radio(
+    "اختر طريقة الإدخال:", ["تسجيل صوتي / وصف الصوت", "كتابة الأعراض مباشرة"]
 )
 
-audio_notes = st.selectbox(
-    "تقييم نبرة صوت المريض وحالته الظاهرة:",
+user_input = ""
+audio_notes = ""
+
+if input_method == "تسجيل صوتي / وصف الصوت":
+  st.info(
+    "💡 نصيحة: صفي نبرة صوت المريض وكلامه بدقة لكي يقوم الذكاء الاصطناعي"
+    " بتحليله كأنك سجلته بالصوت."
+  )
+  user_input = st.text_area(
+    "ماذا قال المريض بالصوت؟",
+    placeholder="اكتب ما نطق به المريض صوتياً هنا...",
+  )
+  audio_notes = st.selectbox(
+    "حدد نبرة صوت المريض الحقيقية أثناء الكلام:",
     [
         "صوت هادئ وطبيعي (Calm / Normal)",
         "صوت مرتبك ومتردد (Anxious / Hesitant)",
         "صوت يظهر عليه الألم الشديد والهلع (Severe Pain / Panic)",
         "صوت متقطع بسبب ضيق التنفس (Shortness of Breath)",
     ],
-)
+  )
+else:
+  user_input = st.text_area(
+    "اكتب الأعراض بالتفصيل:",
+    placeholder="مثلاً: ألم شديد في البطن وغثيان...",
+  )
+  audio_notes = "إدخال نصي مباشر من المريض"
 
-# زر التشغيل والتنفيذ
+# زر التحليل
 if st.button("🚀 تحليل الحالة وتوليد التقرير الطبي الذكي"):
   if user_input:
-    with st.spinner("جاري تحليل نبرة الصوت والذكاء الاصطناعي الطبي..."):
+    with st.spinner(
+        "جاري تحليل نبرة الصوت والمشاعر وتوليد التقرير الطبي..."
+    ):
       try:
         analysis_result = analyze_patient_vocal_stress(
             user_input, audio_notes, target_language
@@ -134,16 +137,14 @@ if st.button("🚀 تحليل الحالة وتوليد التقرير الطب�
         st.markdown(f"### 📊 التقرير الطبي الموجه (بـ {target_language}):")
         st.info(analysis_result)
       except Exception as e:
-        st.error(
-            "يرجى التأكد من إعداد مفتاح الذكاء الاصطناعي (API Key) في الكود."
-        )
+        st.error("يرجى التحقق من إعداد مفتاح الذكاء الاصطناعي في التطبيق.")
   else:
-    st.warning("الرجاء إدخال الأعراض أولاً.")
+    st.warning("الرجاء إدخال تفاصيل الحالة أو الصوت أولاً.")
 
-# تذييل الصفحة
 st.markdown("---")
 st.markdown(
     "<p style='text-align: center; color: gray; font-size: 12px;'>Mosaid Project"
     " - Built with Passion & AI (2026)</p>",
     unsafe_allow_html=True,
 )
+

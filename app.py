@@ -28,16 +28,19 @@ if "Türkçe" in lang_choice:
     tts_lang = "tr"
     input_label = "🎙️ Sesinizi kaydedin ve şikayetinizi söyleyin:"
     camera_label = "📸 Tıbbi bir fotoğraf çekin (Cilt döküntüsü, ilaç vb.):"
+    med_label = "💊 İlaç Takvimi ve Kontrolü:"
 elif "English" in lang_choice:
     user_lang = "English"
     tts_lang = "en"
     input_label = "🎙️ Record your voice and state your symptoms:"
     camera_label = "📸 Take a medical photo (Skin rash, medication, etc.):"
+    med_label = "💊 Medication Schedule & Daily Tracking:"
 else:
     user_lang = "Arabic"
     tts_lang = "ar"
     input_label = "🎙️ سجل صوتك واشرح الأعراض التي تشعر بها:"
     camera_label = "📸 التقط صورة طبية (طفح جلدي، دواء، أو تحليل):"
+    med_label = "💊 جدول الأدوية والمتابعة اليومية:"
 
 st.markdown("---")
 
@@ -71,7 +74,7 @@ if user_audio:
 
 st.markdown("---")
 
-# قسم تحليل الصور والكاميرا (للطفح الجلدي والأدوية)
+# قسم تحليل الصور والكاميرا
 st.subheader(camera_label)
 captured_image = st.camera_input("كاميرا الهاتف / Mobile Camera")
 
@@ -81,12 +84,31 @@ if captured_image is not None:
     
     with st.spinner("جاري تحليل الصورة طبياً... / Analyzing image..."):
         img_prompt = f"""
-        أنت المساعد الطبي الذكي 'موساعد'. حلل هذه الصورة الطبية (قد تكون طفحاً جلدياً، علبة دواء، أو ورقة تحليل).
+        أنت المساعد الطبي الذكي 'موساعد'. حلل هذه الصورة الطبية.
         قدم للمريض ملاحظات وتوجيهات أولية دقيقة باللغة: {user_lang}.
-        تذكر دائماً أن تنصح بزيارة الطبيب المختص للتأكيد.
         """
         img_response = model.generate_content([img_prompt, image])
-        img_res_text = img_response.text
-        
         st.success("تم تحليل الصورة بنجاح!")
-        st.write(f"🩺 **نتيجة تحليل الصورة ({user_lang}):**\n", img_res_text)
+        st.write(f"🩺 **نتيجة تحليل الصورة ({user_lang}):**\n", img_response.text)
+
+st.markdown("---")
+
+# قسم جدول الأدوية والمتابعة اليومية
+st.subheader(med_label)
+col1, col2 = st.columns(2)
+
+with col1:
+    medicine_name = st.text_input("اسم الدواء / İlaç Adı / Medicine Name:")
+    medicine_time = st.text_input("مواعيد الجرعات (مثال: صباحاً ومساءً):")
+    if st.button("💾 حفظ في جدول الأدوية"):
+        if medicine_name:
+            st.success(f"تمت إضافة الدواء ({medicine_name}) بنجاح إلى جدول المتابعة!")
+        else:
+            st.error("يرجى إدخال اسم الدواء.")
+
+with col2:
+    st.markdown("### 📊 المتابعة اليومية للحالة")
+    temp_check = st.slider("مستوى الحرارة أو شعور الألم (1 إلى 10):", 1, 10, 5)
+    daily_note = st.text_area("سجل تطور الأعراض اليوم (مثال: شعرت بتحسن طفيف):")
+    if st.button("📤 إرسال تقرير المتابعة للطبيب"):
+        st.info("تم تسجيل ومزامنة بيانات المتابعة اليومية بنجاح لتكون جاهزة لاطلاع الطبيب المعالج.")

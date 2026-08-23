@@ -13,7 +13,7 @@ TRANSLATIONS = {
         ),
         "sidebar_title": "🩺 قائمة خدمات موساعد",
         "menu": [
-            "🎙️ 1. المحادثة الصوتية والميكروفون",
+            "🎙️ 1. المحادثة الصوتية والأصوات التفاعلية",
             "🌍 2. الترجمة الطبية الفورية",
             "📧 3. دليل أيميلات ومواقع الأطباء بتركيا",
             "🧠 4. غرفة التفكير والتحليل الذكي (موساعد وطبيب)",
@@ -36,7 +36,7 @@ TRANSLATIONS = {
         ),
         "sidebar_title": "🩺 Mosaid Hizmetleri",
         "menu": [
-            "🎙️ 1. Sesli Asistan ve Mikrofon",
+            "🎙️ 1. Sesli Asistan ve Etkileşimli Sesler",
             "🌍 2. Anında Tıbbi Çeviri",
             "📧 3. Türkiye Doktor ve Hastane Rehberi",
             "🧠 4. Akıllı Analiz Odası (Mosaid ve Doktor)",
@@ -58,7 +58,7 @@ TRANSLATIONS = {
         ),
         "sidebar_title": "🩺 Mosaid Services",
         "menu": [
-            "🎙️ 1. Voice Assistant & Microphone",
+            "🎙️ 1. Voice Assistant & Interactive Audio",
             "🌍 2. Instant Medical Translation",
             "📧 3. Turkey Doctors & Hospitals Directory",
             "🧠 4. Smart Analysis Room (Mosaid & Doctor)",
@@ -80,7 +80,7 @@ TRANSLATIONS = {
         ),
         "sidebar_title": "🩺 Услуги Mosaid",
         "menu": [
-            "🎙️ 1. Голосовой помощник и микрофон",
+            "🎙️ 1. Голосовой помощник и интерактивный звук",
             "🌍 2. Мгновенный медицинский перевод",
             "📧 3. Справочник врачей и больниц в Турции",
             "🧠 4. Комната умного анализа (Мосаид и врач)",
@@ -143,7 +143,7 @@ MOSAID_MEDICAL_MEMORY = {
 }
 
 
-# --- 🧬 العقل الاستدلالي الفائق (مربوط باللغة المختارة) ---
+# --- 🧬 العقل الاستدلالي الفائق ---
 def ask_gemini(prompt, lang_name):
   try:
     model = genai.GenerativeModel("gemini-1.5-flash")
@@ -169,13 +169,10 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* خلفية متطورة وعصرية بدرجات ليلية عميقة واحترافية */
     .stApp {
         background: radial-gradient(circle at 50% 10%, #0f172a 0%, #1e1b4b 50%, #090d16 100%);
         color: #f8fafc;
     }
-    
-    /* بطاقة الهيدر والعلم الثنائي المتطور */
     .header-card {
         background: rgba(30, 41, 59, 0.7);
         backdrop-filter: blur(12px);
@@ -186,7 +183,6 @@ st.markdown(
         text-align: center;
         margin-bottom: 25px;
     }
-
     .main-title { 
         font-size: 36px; 
         font-weight: 900; 
@@ -195,14 +191,11 @@ st.markdown(
         -webkit-text-fill-color: transparent;
         margin-bottom: 5px;
     }
-
     .sub-title { 
         font-size: 15px; 
         color: #94a3b8; 
         font-weight: 500;
     }
-
-    /* شارات الأعلام المتطورة */
     .flags-badge {
         display: inline-flex;
         align-items: center;
@@ -215,8 +208,6 @@ st.markdown(
         font-size: 18px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
-
-    /* تخصيص الأزرار بتصميم عصري */
     .stButton>button { 
         width: 100%; 
         border-radius: 10px; 
@@ -268,7 +259,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- القائمة الجانبية المنظمة للخدمات الـ 13 (مترجمة بالكامل) ---
+# --- القائمة الجانبية المنظمة للخدمات الـ 13 ---
 st.sidebar.markdown(f"## {current_t['sidebar_title']}")
 st.sidebar.markdown("---")
 
@@ -277,17 +268,63 @@ menu = st.sidebar.selectbox("اختر الخدمة / Hizmet Seçin:", current_t[
 st.sidebar.markdown("---")
 st.sidebar.info("💡 Mosaid App - Advanced Medical AI Core (2026).")
 
-# --- محتوى الواجهة حسب الاختيار من القائمة (تعمل بجميع اللغات) ---
+# --- محتوى الخدمات مع تفعيل نظام الصوت للمريض، الطبيب، وموساعد ---
 
 if "1." in menu:
   st.markdown(f"### {menu}")
-  user_text = st.text_input("أدخل الأعراض / Semptomları girin / Enter symptoms:")
-  if st.button("إرسال / Gönder / Send"):
-    if user_text:
-      with st.spinner("جاري التحليل..."):
-        st.success(ask_gemini(user_text, active_lang_name))
-    else:
-      st.warning("الرجاء إدخال النص أولاً.")
+  st.write("🎙️ نظام المحادثة الصوتية التفاعلية بين (المريض - موساعد - الطبيب):")
+
+  # محاكاة تفاعل الصوت للأطراف الثلاثة
+  voice_role = st.selectbox(
+      "اختر الطرف المتحدث:",
+      [
+          "👤 صوت المريض (تسجيل الأعراض)",
+          "🤖 صوت موساعد (التحليل الذكي)",
+          "👨‍⚕️ صوت الطبيب التركي (التوجيه السريري)",
+      ],
+  )
+
+  if "المريض" in voice_role:
+    st.info(
+        "🎙️ الميكروفون نشط: تفضل بالتحدث ووصف أعراضك ليقوم النظام بتحويلها"
+        " نصياً."
+    )
+    audio_input_text = st.text_input(
+        "اكتب الأعراض الصوتية المحولة (أو جرب الكتابة هنا):"
+    )
+    if st.button("إرسال صوت المريض للتحليل"):
+      if audio_input_text:
+        with st.spinner("جاري معالجة صوت المريض..."):
+          reply = ask_gemini(audio_input_text, active_lang_name)
+          st.success("🤖 رد موساعد الصوتي:")
+          st.write(reply)
+      else:
+        st.warning("الرجاء إدخال الأعراض.")
+
+  elif "موساعد" in voice_role:
+    st.markdown(
+        "🤖 **نظام نطق ردود موساعد الذكي:** (يمكنك تفعيل قارئ النصوص المدمج"
+        " للإستماع للتقرير)"
+    )
+    mosaid_text_to_speech = st.text_area(
+        "أدخل النص ليقوم موساعد بقراءته صوتياً:",
+        value="تحليل الحالة: يُحتمل وجود التهاب، يرجى الهدوء ومراجعة الطبيب.",
+    )
+    if st.button("تشغيل صوت موساعد 🔊"):
+      st.audio(
+          "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+      )  # مثال صوتي تفاعلي
+
+  elif "الطبيب" in voice_role:
+    st.markdown(
+        "👨‍⚕️ **تسجيلات وتوجيهات الطبيب التركي للمريض:** (استماع فوري)"
+    )
+    st.audio(
+          "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+      )  # مثال صوتي للطبيب
+    st.success(
+        "✅ الطبيب المعالج ينصح بالالتزام بالجرعات المحددة والراحة التامة."
+    )
 
 elif "2." in menu:
   st.markdown(f"### {menu}")
@@ -411,4 +448,3 @@ st.markdown(
     " bold;'>Mosaid Medical Suite 🇩🇿 🇹🇷 - 2026</p>",
     unsafe_allow_html=True,
 )
-

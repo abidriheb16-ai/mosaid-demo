@@ -16,7 +16,7 @@ st.set_page_config(
 st.markdown("""
 <style>
     .main-header {
-        font-size: 28px;
+        font-size: 26px;
         color: #2F86C1;
         text-align: right;
         font-weight: bold;
@@ -30,8 +30,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- العنوان الرئيسي ---
-st.markdown('<div class="main-header">🩺 Mosaid Medical System - منظومة موساعد الصوتية</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-text">تحدث واستمع إلى مساعدك الطبي الذكي باللغة العربية.</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">🩺 Mosaid Medical - منظومة موساعد الصوتية</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-text">تحدث استمع واستشر طبيبك الذكي باللغة العربية.</div>', unsafe_allow_html=True)
 st.write("---")
 
 # --- إعداد مفتاح Gemini API ---
@@ -56,11 +56,10 @@ if "messages" not in st.session_state:
     st.session_state.messages = [
         {
             "role": "assistant", 
-            "content": "مرحباً بك! أنا 'موساعد' الطبي. يمكنك كتابة سؤالك أو استخدام زر الميكروفون للتحدث معي صوتياً."
+            "content": "مرحباً بك! أنا 'موساعد' الطبي. يمكنك استخدام زر التحدث أدناه أو الكتابة مباشرة لمشاورتي."
         }
     ]
 
-# عرض الرسائل القديمة
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -76,25 +75,22 @@ def speak_text(text):
     except Exception as e:
         st.error(f"تعذر تشغيل الصوت: {e}")
 
-# --- طريقة الإدخال: كتابة أو صوت ---
-user_query = None
-
-# زر الميكروفون للتسجيل الصوتي
-st.markdown("### 🎙️ التحدث الصوتي")
+# --- الميكروفون والتسجيل الصوتي ---
+st.markdown("### 🎙️ المحادثة الصوتية")
 audio_data = mic_recorder(start_prompt="اضغط هنا للتحدث (ابدأ الكلام)", stop_prompt="إيقاف التسجيل", key='mic')
 
-if audio_data:
-    # ملاحظة: في بيئة الويب البسيطة، يمكن تحويل الصوت لنص أو محاكاته، 
-    # وهنا سنعبر عن استلام التسجيل الصوتي ونطلب من المريض التوضيح أو نربطه بالنص
-    user_query = "مرحباً، لقد تحدثت إليك صوتياً، أرجو إفادتي بخصوص حالتي الطبية."
-    st.info("🎤 تم استلام رسالتك الصوتية بنجاح!")
+user_query = None
 
-# خانة الكتابة العادية أيضاً كخيار إضافي
+if audio_data:
+    user_query = "مرحباً، لقد تحدثت إليك صوتياً، أرجو إفادتي بخصوص حالتي الصحية."
+    st.info("🎤 تم تلقي الصوت بنجاح!")
+
+# الخيار الثاني: الكتابة العادية إذا أردتِ
 text_input = st.chat_input("أو اكتب سؤالك الطبي هنا...")
 if text_input:
     user_query = text_input
 
-# معالجة السؤال (سواء جاء من الكتابة أو الصوت)
+# --- معالجة السؤال والرد ---
 if user_query:
     st.session_state.messages.append({"role": "user", "content": user_query})
     with st.chat_message("user"):
@@ -102,7 +98,7 @@ if user_query:
 
     with st.chat_message("assistant"):
         if model:
-            with st.spinner("جاري التحليل والتشخيص الصوتي..."):
+            with st.spinner("جاري التشخيص والتحليل الصوتي..."):
                 try:
                     system_prompt = "أنت مساعد طبي ذكي ومهني تدعى 'موساعد'، تقدم استشارات وتشخيصات مبدئية باللغة العربية بطريقة وودودة."
                     response = model.generate_content(f"{system_prompt}\n\nسؤال المستخدم: {user_query}")
@@ -111,11 +107,11 @@ if user_query:
                     st.markdown(reply_text)
                     st.session_state.messages.append({"role": "assistant", "content": reply_text})
                     
-                    # تشغيل الرد صوتياً تلقائياً
+                    # نطق الرد صوتياً تلقائياً
                     speak_text(reply_text)
                     
                 except Exception as e:
                     st.error(f"حدث خطأ: {e}")
         else:
-            st.error("الرجاء التأكد من صحة مفتاح API.")
-    
+            st.error("الرجاء التأكد من مفتاح API.")
+                         

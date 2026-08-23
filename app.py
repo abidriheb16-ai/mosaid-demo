@@ -26,7 +26,7 @@ def create_pdf_report(doc_text, med_list, diet_plan=""):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", 'B', 14)
-    pdf.cell(200, 10, txt="MOSAID MEDICAL SYSTEM - TURKEY HEALTH SOLUTION REPORT", ln=1, align='C')
+    pdf.cell(200, 10, txt="MOSAID MEDICAL SYSTEM - ADVANCED TURKEY HEALTH REPORT", ln=1, align='C')
     pdf.ln(10)
     pdf.set_font("Arial", size=11)
     content = f"DOCTOR DIAGNOSIS:\n{doc_text}\n\nPRESCRIPTION & ALTERNATIVES:\n{med_list}\n\nDIET & LIFESTYLE PLAN:\n{diet_plan}"
@@ -35,7 +35,14 @@ def create_pdf_report(doc_text, med_list, diet_plan=""):
     pdf.output(file_path)
     return file_path
 
-st.title("🩺 Mosaid Medical System - الحل الذكي لتحديات القطاع الصحي في تركيا")
+st.title("🩺 Mosaid Medical System - منظومة موساعد الذكية الشاملة في تركيا")
+
+# وضع ذوي الاحتياجات الخاصة (Accessibility Toggle)
+accessibility_mode = st.toggle("♿ وضع ذوي الاحتياجات الخاصة (تفعيل الخطوط الكبيرة والوضع الصوتي البصري)")
+
+if accessibility_mode:
+    st.markdown("<style>body {font-size: 22px !important;}</style>", unsafe_allow_html=True)
+    st.success("✅ تم تفعيل وضع تسهيل الوصول (Accessibility Mode) بنجاح. الخطوط أكبر والواجهة مبسطة.")
 
 lang_choice = st.selectbox(
     "🌐 اختر لغة التواصل / Select Language:",
@@ -53,14 +60,25 @@ col_patient, col_doctor = st.columns(2)
 with col_patient:
     st.header("👤 بوابة المريض (Patient Portal)")
     
-    # حل لمشكلة الاكتظاظ وطول المواعيد: الفرز الذكي
+    # ميزة الإغماء، الدوخة، والطوارئ الفورية
+    st.subheader("🚨 نداء الاستغاثة السريع للدوخة والإغماء (Fall & Dizziness SOS)")
+    st.error("⚠️ خاص لمن يعانون من نوبات الدوخة، السقوط المفاجئ، أو فقدان الوعي:")
+    
+    if st.button("🚨 اضغط هنا في حال الدوخة الشديدة أو السقوط (اتصال طوارئ 112)"):
+        st.error("🚨 **تم تفعيل نداء الطوارئ القصوى!** يتم الآن إرسال إحداثيات موقعك وحالتك لأقرب وحدة إسعاف في تركيا (112). ابق هادئاً ولا تتحرك.")
+        sos_tts = gTTS(text="حالة طارئة، يرجى طلب الإسعاف 112 فوراً.", lang=tts_lang)
+        sos_tts.save("sos.mp3")
+        st.audio("sos.mp3", autoplay=True)
+
+    st.markdown("---")
+    
+    # الفرز الذكي
     st.subheader("⏱️ تخفيف الاكتظاظ والفرز الذكي (Smart Triage)")
-    st.caption("تجنب طوابير الانتظار الطويلة في المشافي الحكومية عبر الفحص المبدئي السريع:")
-    triage_symptom = st.text_input("أدخل العرض الرئيسي باختصار (مثلاً: ألم أسنان، حرارة مرتفعة):")
+    triage_symptom = st.text_input("أدخل العرض الرئيسي باختصار (مثلاً: دوخة مستمرة، ألم صدر):")
     if st.button("🔍 تحديد الاختصاص المناسب وتوجيه المريض"):
         if triage_symptom:
             with st.spinner("جاري تحليل الحالة لتحديد العيادة المناسبة..."):
-                triage_prompt = f"المريض يعاني من: {triage_symptom}. حدد له بدقة أي اختصاص طبى تركي يجب أن يذهب إليه، وهل الحالة تستدعي مستشفى حكومي أم عيادة منزلية، باللغة {user_lang}."
+                triage_prompt = f"المريض يعاني من: {triage_symptom}. حدد له بدقة أي اختصاص طبى تركي يجب أن يذهب إليه، وهل الحالة تستدعي إسعاف أو مستشفى، باللغة {user_lang}."
                 triage_res = model.generate_content(triage_prompt).text
                 st.info(triage_res)
         else:
@@ -68,8 +86,8 @@ with col_patient:
 
     st.markdown("---")
     
-    # حل لمشكلة نقص الأدوية: البحث عن البدائل التركية المتوفرة (Eşdeğer İlaç)
-    st.subheader("💊 محبحث البدائل الدوائية (أثناء نقص الأدوية):")
+    # محرك البدائل الدوائية
+    st.subheader("💊 محرك البدائل الدوائية (Eşdeğer İlaç):")
     missing_drug = st.text_input("أدخل اسم الدواء غير المتوفر أو باهظ الثمن:")
     if st.button("🔄 البحث عن دواء بديل متوفر في تركيا"):
         if missing_drug:
@@ -146,7 +164,6 @@ with col_doctor:
         doc_diagnosis = st.text_area("التشخيص الطبي (Diagnosis):")
         doc_meds = st.text_area("الأدوية الموصوفة والبدائل المقترحة (Prescription & Alternatives):")
         
-        # فحص تضارب الأدوية
         if st.button("🔍 فحص تضارب الأدوية تلقائياً (Check Drug Interactions)"):
             if doc_meds:
                 with st.spinner("جاري فحص التضارب الدوائي..."):

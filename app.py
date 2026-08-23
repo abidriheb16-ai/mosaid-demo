@@ -37,9 +37,9 @@ def create_pdf_report(doc_text, med_list, diet_plan=""):
     pdf.output(file_path)
     return file_path
 
-st.title("🩺 Mosaid Medical System - منظومة موساعد الطبية الشاملة")
+st.title("🩺 Mosaid Medical System - منظومة موساعد الذكية المتطورة")
 
-# 1. اختيار اللغة والمترجم الطبي
+# اختيار اللغة والمترجم الطبي
 lang_choice = st.selectbox(
     "🌐 اختر لغة التواصل / Select Language:",
     ["العربية (Arabic)", "Türkçe (Turkish)", "English"]
@@ -50,27 +50,34 @@ tts_lang = "ar" if "العربية" in lang_choice else ("tr" if "Türkçe" in l
 
 st.markdown("---")
 
-# تقسيم الشاشة إلى بوابتين (المريض والطبيب)
 col_patient, col_doctor = st.columns(2)
 
 # ==================== 👤 بوابة المريض ====================
 with col_patient:
     st.header("👤 بوابة المريض (Patient Portal)")
     
-    # 5. قسم الطوارئ والتنبيه السريع
+    # قسم الطوارئ والتنبيه السريع
     st.subheader("🚨 كشف الطوارئ السريع (Emergency Check)")
     is_emergency = st.checkbox("⚠️ هل تشعر بألم حاد في الصدر، ضيق تنفس شديد، أو فقدان وعي؟")
     if is_emergency:
         st.error("🚨 **حالة طارئة!** يرجى الاتصال بالإسعاف فوراً (112 في تركيا) أو التوجه لأقرب مستشفى.")
 
-    # 10. قسم الإسعافات الأولية الإرشادية
-    with st.expander("🩹 دليل الإسعافات الأولية السريعة (First Aid Instructions)"):
-        st.write("**الاختناق:** ابدأ بضغطات البطن (مناورة هيمليك) فوراً.")
-        st.write("**الجروح والحروق:** اغسل بالماء البارد وضع ضاغطاً معقماً دون فتح الفقاعات.")
+    # دليل التشخيص السريع للأمراض الشائعة
+    with st.expander("🩺 مرجع التشخيص السريع للأمراض الشائعة (Common Illnesses Guide)"):
+        selected_illness = st.selectbox(
+            "اختر الحالة للاطلاع على الأعراض والتوجيه المبدئي:",
+            ["اختر مرضاً...", "الأنفلونزا ونزلة البرد", "الشقيقة (الصداع النصفي)", "التهاب المعدة والقولون", "حساسية الجلد والطفح", "ارتفاع السكري"]
+        )
+        if selected_illness != "اختر مرضاً...":
+            if st.button("🔍 عرض تفاصيل وتشخيص الحالة"):
+                with st.spinner("جاري جلب التشخيص والتوجيه الطبي..."):
+                    ill_prompt = f"قدم تشخيصاً مبدئياً، الأعراض الشائعة، والخطوات الأولى للتعامل مع مرض ({selected_illness}) باللغة {user_lang}."
+                    ill_res = model.generate_content(ill_prompt).text
+                    st.info(ill_res)
 
     st.markdown("---")
     
-    # 2. التواصل الصوتي ومتابعة الأعراض
+    # التواصل الصوتي
     st.subheader("🎙️ سجل أعراضك بالصوت:")
     user_audio = st.audio_input("تسجيل الصوت / Audio Record")
 
@@ -103,7 +110,7 @@ with col_patient:
             tts.save("patient_res.mp3")
             st.audio("patient_res.mp3", autoplay=True)
 
-    # 9. كاميرا التشخيص والتمرير
+    # كاميرا التشخيص
     st.markdown("---")
     st.subheader("📸 كاميرا الفحص وتصوير الأدوية والجلد:")
     captured_image = st.camera_input("التقط صورة للجلد أو الدواء")
@@ -115,7 +122,7 @@ with col_patient:
             st.success("تم تحليل الصورة!")
             st.write(img_res)
 
-    # 7. رد صوت الطبيب والوصفة
+    # رد صوت الطبيب والوصفة
     if os.path.exists("doctor_voice.mp3"):
         st.markdown("---")
         st.success("🔔 وصلك رد صوتي جديد من الطبيب المعالج + الوصفة الطبية!")
@@ -134,7 +141,7 @@ with col_doctor:
         doc_diagnosis = st.text_area("التشخيص الطبي (Diagnosis):")
         doc_meds = st.text_area("الأدوية الموصوفة (Prescription):")
         
-        # 3. فحص تضارب الأدوية
+        # فحص تضارب الأدوية
         if st.button("🔍 فحص تضارب الأدوية تلقائياً (Check Drug Interactions)"):
             if doc_meds:
                 with st.spinner("جاري فحص التضارب الدوائي..."):
@@ -144,7 +151,7 @@ with col_doctor:
             else:
                 st.error("يرجى إدخال اسم الدواء أولاً.")
 
-        # 6. النظام الغذائي
+        # النظام الغذائي
         doc_diet = st.text_area("🍎 النظام الغذائي والممنوعات (Dietary Advice):")
         
         if st.button("🚀 إرسال الرد الصوتي للمريض + إصدار PDF"):
@@ -170,7 +177,7 @@ with col_doctor:
             else:
                 st.error("يرجى كتابة التشخيص أولاً.")
 
-    # 8. السجل الطبي التراكمي
+    # السجل الطبي التراكمي
     st.markdown("---")
     st.subheader("📁 السجل الطبي التراكمي للمريض (Medical Record):")
     if st.session_state.medical_history:
@@ -179,9 +186,10 @@ with col_doctor:
     else:
         st.caption("لا توجد سجلات سابقة بعد.")
 
-    # 4. حجز موعد العيادة
+    # حجز موعد العيادة
     st.markdown("---")
     st.subheader("📅 حجز موعد في العيادة (Appointment Booking):")
     app_date = st.date_input("اختر تاريخ الموعد:")
     if st.button("📧 تأكيد وحجز الموعد"):
         st.success(f"تم تسجيل الموعد بتاريخ {app_date} وإرسال إشعار للعيادة بنجاح!")
+    
